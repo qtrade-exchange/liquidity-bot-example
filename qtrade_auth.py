@@ -20,7 +20,10 @@ class QtradeAuth(requests.auth.AuthBase):
         request_details += url_obj.path + url_obj.params + "\n"
         request_details += timestamp + "\n"
         if req.body:
-            request_details += req.body + "\n"
+            if isinstance(req.body, str):
+                request_details += req.body + "\n"
+            else:
+                request_details += req.body.decode('utf8') + "\n"
         else:
             request_details += "\n"
         request_details += self.key
@@ -33,10 +36,10 @@ class QtradeAuth(requests.auth.AuthBase):
         return req
 
 if __name__ == "__main__":
-    # Create a session object to make repeated API calls easy!
     api = requests.Session()
-    # Create an authenticator with your API key
-    api.auth = QtradeAuth("1:1111111111111111111111111111111111111111111111111111111111111111")
+
+    key = open("lpbot_hmac.txt", "r").read().strip()
+    api.auth = QtradeAuth(key)
     
     # Make a call to API
     res = api.get('https://api.qtrade.io/v1/user/me').json()
