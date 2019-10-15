@@ -76,7 +76,7 @@ class PriceFinder:
 		self.update_midpoint()
 
 	def update_midpoint(self):
-		log.info("Updating midpoint...")
+		log.debug("Updating midpoint...")
 		with self._lock:
 			log.debug("PriceFinder locked to find new average midpoint")
 			midpoint_count = 0
