@@ -73,7 +73,8 @@ class PriceFinder:
 		self._lock = threading.Lock()
 		self.avg_midpoint = None
 		self.update_interval = 2
-		self.update_midpoint()
+		#self.update_midpoint()
+		self.update_daemon()
 
 	def update_midpoint(self):
 		log.debug("Updating midpoint...")

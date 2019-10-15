@@ -46,9 +46,7 @@ class OrderPlacer:
 		self.price_finder = PriceFinder()
 		self.buy_orders = []
 		self.sell_orders = []
-
 		self.api = QtradeAPI("https://api.qtrade.io", key=open("lpbot_hmac.txt", "r").read().strip())
-		self.fetch_balances()
 
 	def fetch_balances(self):
 		log.debug("Fetching balances from api...")
@@ -61,15 +59,11 @@ class OrderPlacer:
 		log.info("Current inventory is %s BTC and %s DOGE", self.btc_inv, self.doge_inv)
 
 	def orders_daemon(self):
-		#while True:
-		#	self.fetch_orders()
-		#	self.create_orders()
-		#	time.sleep(self.update_interval)
-		self.fetch_orders()
-		self.create_orders()
-		time.sleep(self.update_interval)
-		self.fetch_orders()
-		print(self.buy_orders+self.sell_orders)
+		while True:
+			self.fetch_orders()
+			self.fetch_balances()
+			self.create_orders()
+			time.sleep(self.update_interval)
 
 	def fetch_orders(self): # fetch orders currently in place
 		log.debug("Fetching active orders from api...")
@@ -101,7 +95,6 @@ class OrderPlacer:
 			new_sell_orders.append(SellOrder(sell_amount, sell_price))
 		log.debug("Generated new orders!")
 		if self.eval_orders(new_buy_orders, new_sell_orders):
-			log.info("Cancelling old orders and placing new ones...")
 			self.cancel_orders()
 			self.buy_orders = new_buy_orders
 			self.sell_orders = new_sell_orders
@@ -130,20 +123,27 @@ class OrderPlacer:
 			log.debug("Unlocking PriceFinder")
 
 	def place_orders(self):
+		log.info("Placing new orders...")
 		for b in self.buy_orders:
 			log.info("Placing %s", b)
 			req = {'amount': str(b.amount), 'market_id': 36, 'price': str(b.price)}
 			self.api.post("https://api.qtrade.io/v1/user/buy_limit", json=req)
+			b.active = True
 		for s in self.sell_orders:
 			log.info("Placing %s", s)
 			req = {'amount': str(s.amount), 'market_id': 36, 'price': str(s.price)}
 			self.api.post("https://api.qtrade.io/v1/user/sell_limit", json=req)
+			s.active = False
 
-	def cancel_orders(self): # cancel all active orders
+	def cancel_orders(self):
+		log.info("Cancelling all orders...")
 		for o in self.buy_orders+self.sell_orders:
 			if o.active:
-				log.info("Cancelling order %s", o.order_id)
-				pprint(self.api.post("https://api.qtrade.io/v1/user/cancel_order", json={"id":o.order_id}))
+				log.debug("Cancelling order %s", o.order_id)
+				if self.api.post("https://api.qtrade.io/v1/user/cancel_order", json={"id":o.order_id}):
+					log.info("Cancelled order %s", o.order_id)
+				else:
+					log.warning("Could not cancel order %s", o.order_id)
 
 
 if __name__ == "__main__":
@@ -159,6 +159,4 @@ if __name__ == "__main__":
 	root.addHandler(handler)
 
 	op = OrderPlacer()
-	op.fetch_orders()
-	op.cancel_orders()
-	#op.orders_daemon()
+	op.orders_daemon()
