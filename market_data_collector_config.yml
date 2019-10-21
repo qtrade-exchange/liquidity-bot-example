@@ -1,3 +1,6 @@
 ---
 update_period: 3
+scrapers:
+  qtrade:
+    markets: ['DOGE_BTC']
 ...

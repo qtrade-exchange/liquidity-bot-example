@@ -1,20 +1,19 @@
-class MarketDatastore:
+class ExchangeDatastore:
 	midpoints = {
 
 	}
 	tickers = {
 
 	}
-	balances = {
-	
-	}
 
-class OrderDatastore:
-	num_active_buy = 0
-	num_active_sell = 0
+class PrivateDatastore:
+	""" Datastore tracking our liquidity orders and user balances. Private data on qTrade """
 	buy_orders = {
 
 	}
 	sell_orders = {
 
+	}
+	balances = {
+	
 	}
