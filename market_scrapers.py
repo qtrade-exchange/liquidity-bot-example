@@ -1,5 +1,6 @@
 import threading, sys, json, time
 import logging as log
+import pprint
 from decimal import Decimal
 
 from qtrade_client.api import QtradeAPI
@@ -14,9 +15,13 @@ class APIScraper:
 		pass
 
 
-class qTradeScraper(APIScraper):
+class QTradeScraper(APIScraper):
 	def __init__(self, **kwargs):
 		self.api = QtradeAPI("https://api.qtrade.io", key=open("lpbot_hmac.txt", "r").read().strip())
+		self.market_map = {
+			"{market_currency}_{base_currency}".format(**m): m
+			for m in self.api.get("/v1/markets")['markets']}
+		#pprint.pprint(self.market_map)
 		super().__init__(**kwargs)
 
 	def scrape_ticker(self):
@@ -53,7 +58,6 @@ class qTradeScraper(APIScraper):
 				o['amount'] = Decimal(o['market_amount_remaining'])
 				o['market_currency'] = mi['market_currency']
 				o['base_currency'] = mi['base_currency']
-
 				o['base_amount'] = o['price']*o['amount']
 				if o["order_type"] == "sell_limit":
 					open_orders["sell_orders"].append(o)
@@ -73,3 +77,5 @@ if __name__ == "__main__":
 	formatter = log.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 	handler.setFormatter(formatter)
 	root.addHandler(handler)
+
+	QTradeScraper()

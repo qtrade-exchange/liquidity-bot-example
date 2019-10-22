@@ -9,7 +9,7 @@ async def main():
 	market_task = asyncio.create_task(MarketDataCollector().daemon())
 	orderbook_task = asyncio.create_task(OrderbookManager().monitor())
 	#while True:
-	await asyncio.sleep(10)
+	await asyncio.sleep(7)
 
 if __name__ == "__main__":
 	# set up logging

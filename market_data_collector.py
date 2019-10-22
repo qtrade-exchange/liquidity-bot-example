@@ -2,10 +2,10 @@ import threading, sys, json, time, yaml, asyncio
 import logging as log
 
 from data_classes import ExchangeDatastore, PrivateDatastore
-from market_scrapers import qTradeScraper
+from market_scrapers import QTradeScraper
 
 scraper_classes = {
-	"qtrade": qTradeScraper,
+	"qtrade": QTradeScraper,
 }
 
 class MarketDataCollector:
@@ -16,6 +16,7 @@ class MarketDataCollector:
 		self.scrapers = []
 		for name, cfg in self.config['scrapers'].items():
 			self.scrapers.append(scraper_classes[name](market_name=name, **cfg))
+		PrivateDatastore.qtrade_market_map = QTradeScraper().market_map # this is a hack and should probably be replaced
 
 	def update_tickers(self):
 		log.debug("Updating tickers...")
