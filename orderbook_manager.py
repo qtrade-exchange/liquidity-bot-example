@@ -1,7 +1,5 @@
-import sys
-import yaml
 import asyncio
-import logging as log
+import logging
 from decimal import Decimal
 
 from data_classes import ExchangeDatastore, PrivateDatastore
@@ -10,12 +8,13 @@ from qtrade_client.api import QtradeAPI
 
 COIN = Decimal('.00000001')
 
+log = logging.getLogger('mdc')
+
 
 class OrderbookManager:
-    def __init__(self):
-        # load config from yaml file
-        self.config = yaml.load(open("orderbook_manager_config.yml"))
-        self.api = QtradeAPI("https://api.qtrade.io", key=open("lpbot_hmac.txt", "r").read().strip())
+    def __init__(self, endpoint, key, config):
+        self.config = config
+        self.api = QtradeAPI(endpoint, key=key)
 
     def rebalance_orders(self):
         self.cancel_all_orders()
@@ -35,7 +34,7 @@ class OrderbookManager:
                     if market_coin not in {'reserve', 'target'}:
                         allocation_sum += alloc[coin][market_coin]
                         num_markets += 1
-                amount_to_allocate = min(min(alloc[coin]['target'], allocation_sum), PrivateDatastore.balances[coin]-Decimal(alloc[coin]['reserve']))
+                amount_to_allocate = min(min(alloc[coin]['target'], allocation_sum), PrivateDatastore.balances[coin] - Decimal(alloc[coin]['reserve']))
                 # evenly distribute amount_to_allocate among all allocated coins and place orders
                 for market_coin in alloc[coin]:
                     if market_coin not in {'reserve', 'target'}:
@@ -156,15 +155,3 @@ class OrderbookManager:
                     self.rebalance_orders()
                     break
             await asyncio.sleep(self.config['monitor_period'])
-
-
-if __name__ == "__main__":
-    # set up logging
-    log_level = log.INFO
-    root = log.getLogger()
-    root.setLevel(log_level)
-    handler = log.StreamHandler(sys.stdout)
-    handler.setLevel(log_level)
-    formatter = log.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)

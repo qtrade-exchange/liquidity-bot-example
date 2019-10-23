@@ -1,6 +1,5 @@
-import sys
 import asyncio
-import logging as log
+import logging
 
 from data_classes import ExchangeDatastore, PrivateDatastore
 from market_scrapers import QTradeScraper
@@ -9,11 +8,13 @@ scraper_classes = {
     "qtrade": QTradeScraper,
 }
 
+log = logging.getLogger('mdc')
+
 
 class MarketDataCollector:
-    def __init__(self):
+    def __init__(self, config):
         # load config from yaml file
-        self.config = yaml.load(open("market_data_collector_config.yml"))
+        self.config = config
         # load scrapers
         self.scrapers = []
         for name, cfg in self.config['scrapers'].items():
@@ -74,17 +75,3 @@ class MarketDataCollector:
             self.update_balances()
             self.update_orders()
             await asyncio.sleep(self.config["update_period"])
-
-
-if __name__ == "__main__":
-    # set up logging
-    log_level = log.INFO
-    root = log.getLogger()
-    root.setLevel(log_level)
-    handler = log.StreamHandler(sys.stdout)
-    handler.setLevel(log_level)
-    formatter = log.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
-
-    asyncio.run(MarketDataCollector().daemon())
