@@ -1,4 +1,5 @@
-import threading, sys, json, time, yaml, asyncio
+import sys
+import asyncio
 import logging as log
 
 from data_classes import ExchangeDatastore, PrivateDatastore
@@ -17,21 +18,21 @@ class MarketDataCollector:
         self.scrapers = []
         for name, cfg in self.config['scrapers'].items():
             self.scrapers.append(scraper_classes[name](market_name=name, **cfg))
-        PrivateDatastore.qtrade_market_map = QTradeScraper().market_map # this is a hack and should probably be replaced
+        PrivateDatastore.qtrade_market_map = QTradeScraper().market_map  # this is a hack and should probably be replaced
 
     def update_tickers(self):
         log.debug("Updating tickers...")
         for s in self.scrapers:
             ExchangeDatastore.tickers[s.market_name] = s.scrape_ticker()
 
-    def update_midpoints(self): # be sure to update tickers first
+    def update_midpoints(self):  # be sure to update tickers first
         log.debug("Updating midpoints...")
         for exchange_name, markets in ExchangeDatastore.tickers.items():
             for market, ticker in markets.items():
                 bid = ticker["bid"]
                 last = ticker["last"]
                 ExchangeDatastore.midpoints.setdefault(exchange_name, {})
-                ExchangeDatastore.midpoints[exchange_name][market] = (bid+last)/2
+                ExchangeDatastore.midpoints[exchange_name][market] = (bid + last) / 2
 
     def update_balances(self):
         log.debug("Updating balances...")
