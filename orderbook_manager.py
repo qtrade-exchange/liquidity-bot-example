@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from decimal import Decimal
 
 from data_classes import ExchangeDatastore, PrivateDatastore
@@ -15,16 +16,90 @@ class OrderbookManager:
     def __init__(self, endpoint, key, config):
         self.config = config
         self.api = QtradeAPI(endpoint, key=key)
+        self.orders = {'buy': buy_orders, 'sell': sell_orders}
+        self.market_map = {"{market_currency}_{base_currency}".format(**m): m
+                            for m in self.api.get("/v1/markets")['markets']}
 
-    def rebalance_orders(self):
+    def compute_allocations(self):
+        """ Given our allocation % targets and our current balances, figure out
+        how much market and base currency we would _ideally_ be
+        allocating to each market
+        return {
+            "DOGE_BTC": [1200, 0.0012],
+        }
+        """
+        b_data = self.api.get("/v1/user/balances_all")
+        balances = {}
+        for b in b_data['balances'] + b_data['order_balances']:
+            balances[b['currency']] = balances.setdefault(b['currency'], 0) + Decimal(b['balance'])
+
+        allocs = {}
+        alloc_conf = self.config['market_allocations']
+        for market in alloc_conf:
+            market_coin, base_coin = market.split('_')
+            market_reserve = Decimal(self.config['currency_reserves'][market_coin])
+            base_reserve = Decimal(self.config['currency_reserves'][base_coin])
+            market_amount = (balances[market_coin]-market_reserve)*alloc_conf[market][market_coin]
+            base_amount = (balances[base_coin]-base_reserve)*alloc_conf[market][base_coin]
+            allocs[market] = (market_amount, base_amount)
+        return allocs
+
+    def allocate_orders(self, market_alloc, base_alloc):
+        """ Given some amount of base and market currency determine how we'll allocate orders 
+        return {
+            "buy": [
+                (0.01, 0.00001256),
+            ],
+            "sell": [
+                (0.01, 1250),
+            ]
+        }
+        """
+        buy_allocs = []
+        sell_allocs = []
+        for slip, ratio in self.config['intervals']['buy'].items():
+            ratio = Decimal(ratio)
+            buy_allocs.append((slip, ratio*base_alloc))
+        for slip, ratio in self.config['intervals']['sell'].items():
+            ratio = Decimal(ratio)
+            sell_allocs.append((slip, market_alloc*ratio))
+        return {'buy': buy_allocs, 'sell': sell_allocs}
+
+    def price_orders(self, orders, midpoint):
+        """
+        return {
+            "buy": [
+                (0.00000033, 0.00001256),
+            ],
+            "sell": [
+                (0.00000034, 1250),
+            ]
+        } """
+        midpoint = Decimal(midpoint)
+        priced_sell_orders = []
+        priced_buy_orders = []
+        for slip, ratio in orders['sell']:
+            slip = Decimal(slip)
+            priced_sell_orders.append((midpoint+(midpoint*slip), ratio))
+        for slip, ratio in orders['buy']:
+            slip = Decimal(slip)
+            priced_buy_orders.append((midpoint-(midpoint*slip), ratio))
+        return {'buy': priced_buy_orders, 'sell': priced_sell_orders}
+
+    def rebalance_orders(self, allocation_profile):
+        for market, profile in allocation_profile.items():
+            pass
+
+    def old_rebalance_orders(self):
         self.cancel_all_orders()
         log.info("Placing new orders...")
         alloc = self.config['allocations']
         base_coin = "BTC"
+        balances = self.api.balances()
         for coin in alloc:
-            if PrivateDatastore.balances[coin] < Decimal(alloc[coin]['reserve']):
-                log.warning("%s balance is below reserve...", coin)
-                continue
+            # if balances[coin] < alloc[coin]['reserve']:
+            #     log.warning("%s balance is below reserve...", coin)
+            #     continue
             if coin == base_coin:
                 # set buy orders using BTC
                 allocation_sum = 0
@@ -95,6 +170,7 @@ class OrderbookManager:
                 return True # trigger a rebalance
         return False
 
+    # plan to remove
     def check_coin_reserve(self, coin):
         bal = PrivateDatastore.balances[coin]
         res = Decimal(self.config['allocations'][coin]['reserve'])
@@ -103,6 +179,7 @@ class OrderbookManager:
             return True # trigger a rebalance
         return False
 
+    # plan to remove
     def check_placed_orders(self, coin):
         if coin == 'BTC':
             if not PrivateDatastore.buy_orders['qtrade']:
@@ -144,14 +221,41 @@ class OrderbookManager:
                 return True
         return False
 
+    def update_orders(self):
+        orders = self.api.get("/v1/user/orders")["orders"]
+
+        log.debug("Updating orders...")
+        buy_orders = []
+        sell_orders = []
+        for o in orders:
+            if o['open']:
+                mi = self.api.get("/v1/market/" + str(o['market_id']))['market']
+                o['price'] = Decimal(o['price'])
+                o['market_amount_remaining'] = Decimal(o['market_amount_remaining'])
+                o['base_amount'] = o['price'] * o['market_amount_remaining']
+                o['market'] = mi['market_currency'] + '_' + mi['base_currency']
+                if o["order_type"] == "sell_limit":
+                    sell_orders.append(o)
+                elif o["order_type"] == "buy_limit":
+                    buy_orders.append(o)
+        log.debug("Active buy orders: %s", buy_orders)
+        log.debug("Active sell orders: %s", sell_orders)
+
+        log.info("%s active buy orders", len(buy_orders))
+        log.info("%s active sell orders", len(sell_orders))
+        return {'buy': buy_orders, 'sell': sell_orders}
+
     def buy_sell_bias(self):
         return (.5, .5)
 
     async def monitor(self):
         while True:
             log.info("Monitoring market data...")
-            for coin in self.config['allocations']:
-                if self.check_coin_allocations(coin) or self.check_coin_reserve(coin) or self.check_placed_orders(coin):
-                    self.rebalance_orders()
-                    break
+            allocs = self.compute_allocations()
+            allocation_profile = {}
+            for market, a in allocs.items():
+                midpoint = ExchangeDatastore.midpoints[market]
+                allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
+            self.orders = self.update_orders()
+            self.rebalance_orders(allocation_profile)
             await asyncio.sleep(self.config['monitor_period'])

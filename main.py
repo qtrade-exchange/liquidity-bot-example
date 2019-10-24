@@ -57,5 +57,40 @@ def obm(ctx):
     loop.run_forever()
 
 
+@cli.command()
+@click.pass_context
+def balances_test(ctx):
+    ba = ctx.obj['obm'].api.get("/v1/user/balances_all")
+    print(ba)
+
+
+@cli.command()
+@click.pass_context
+def compute_allocations_test(ctx):
+    print(ctx.obj['obm'].compute_allocations())
+
+
+@cli.command()
+@click.pass_context
+def allocate_orders_test(ctx):
+    allocs = ctx.obj['obm'].compute_allocations()
+    a = allocs.popitem()[1]
+    print(ctx.obj['obm'].allocate_orders(a[1], a[0]))
+
+
+@cli.command()
+@click.pass_context
+def price_orders_test(ctx):
+    allocs = ctx.obj['obm'].compute_allocations()
+    a = allocs.popitem()[1]
+    print(ctx.obj['obm'].price_orders(ctx.obj['obm'].allocate_orders(a[0], a[1]), 0.0000033))
+
+
+@cli.command()
+@click.pass_context
+def update_orders_test(ctx):
+    print(ctx.obj['obm'].update_orders())
+
+
 if __name__ == "__main__":
     cli(obj={})

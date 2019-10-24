@@ -1,13 +1,13 @@
 orderbook_manager:
-  allocations:
-    BTC:
-      DOGE: 0.01
-      reserve: 0.01
-      target: 0.03
-    DOGE:
-      BTC: 1000
-      reserve: 1000
-      target: 25000
+  market_allocations:
+    # configs are always "market_base" format
+    DOGE_BTC:
+      BTC: 1
+      DOGE: 1
+  currency_reserves:
+    DOGE: 100
+    BTC: 0.00001
+
   intervals:
     buy:
       0.02: 0.2
