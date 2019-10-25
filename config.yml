@@ -10,21 +10,27 @@ orderbook_manager:
 
   intervals: # can't place all orders if ratios add to 1?
     buy:
-      #0.03: 0.2
-      0.05: 0.6
-      0.09: 0.4
+      0.03: 0.2
+      0.05: 0.3
+      0.09: 0.3
+      0.13: 0.1
+      0.20: 0.1
     sell:
-      #0.03: 0.2
-      0.05: 0.6
-      0.09: 0.4
-  monitor_period: 3
+      0.03: 0.2
+      0.05: 0.3
+      0.09: 0.3
+      0.13: 0.1
+      0.20: 0.1
+  monitor_period: 60
   reserve_tolerance: .05
-  price_tolerance: .05
+  price_tolerance: .01
   amount_tolerance: .05
-  dry_run_mode: False
+  dry_run_mode: True
 
 market_data_collector:
-  update_period: 3
+  update_period: 60
   scrapers:
     qtrade:
       markets: ['DOGE_BTC']
+    #bittrex:
+    #  markets: ['BTC-DOGE']

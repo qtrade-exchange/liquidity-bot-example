@@ -1,6 +1,7 @@
 import sys
 import logging as log
 from decimal import Decimal
+import requests
 
 from qtrade_client.api import QtradeAPI
 
@@ -8,7 +9,7 @@ from qtrade_client.api import QtradeAPI
 class APIScraper:
     def __init__(self, **kwargs):
         self.__dict__.update(**kwargs)
-        self.does_pull_orders = True
+        #self.does_pull_orders = True # this shouldn't be required anymore
 
     def scrape_ticker(self):  # dummy function, meant to be overridden
         pass
@@ -33,6 +34,25 @@ class QTradeScraper(APIScraper):
             log.debug("Ask price is %s", ask)
             tickers[market] = {"bid": bid, "last": last, "ask": ask}
         return tickers
+
+
+class BittrexScraper(APIScraper):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def scrape_ticker(self):
+        tickers = {}
+        for market in self.markets:
+            res = requests.get('https://api.bittrex.com/api/v1.1/public/getticker?market=' + market)
+
+            log.debug("Ticker %s from %s was acquired successfully", market, self.market_name)
+            bid = Decimal(res["bid"])
+            log.debug("Bid price is %s", bid)
+            last = Decimal(res["last"])
+            log.debug("Last price is %s", last)
+            ask = Decimal(res["ask"])
+            log.debug("Ask price is %s", ask)
+            tickers[market] = {"bid": bid, "last": last, "ask": ask}
 
 
 if __name__ == "__main__":
