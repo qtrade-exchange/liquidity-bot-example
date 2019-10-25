@@ -39,6 +39,4 @@ class MarketDataCollector:
             log.info("Pulling market data...")
             self.update_tickers()
             self.update_midpoints()
-            self.update_balances()
-            self.update_orders()
             await asyncio.sleep(self.config["update_period"])

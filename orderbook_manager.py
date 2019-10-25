@@ -92,19 +92,27 @@ class OrderbookManager:
         return {'buy': priced_buy_orders, 'sell': priced_sell_orders}
 
     def rebalance_orders(self, allocation_profile, orders, force = False):
+        if self.config['dry_run_mode']:
+            log.warning("You are in dry run mode!  Orders will not be cancelled or placed!")
         if self.check_for_rebalance(allocation_profile, orders) or force:
-            self.cancel_all_orders(orders)
+            if not self.config['dry_run_mode']:
+                self.cancel_all_orders(orders)
             for market, profile in allocation_profile.items():
+                market_coin, base_coin = market.split('_')
                 for price, amount in profile['buy']:
+                    log.info("Placing an order to buy %s %s for %s %s each", (amount/price).quantize(COIN), market_coin, price.quantize(COIN), base_coin)
                     req = {'amount': str((amount/price).quantize(COIN)),
                            'price': str(price.quantize(COIN)),
                            'market_id': self.market_map[market]['id']}
-                    self.api.post('/v1/user/buy_limit', json=req)
+                    if not self.config['dry_run_mode']:
+                        self.api.post('/v1/user/buy_limit', json=req)
                 for price, amount in profile['sell']:
+                    log.info("Placing an order to sell %s %s for %s %s each", amount.quantize(COIN), market_coin, price.quantize(COIN), base_coin)
                     req = {'amount': str(amount.quantize(COIN)),
                            'price': str(price.quantize(COIN)),
                            'market_id': self.market_map[market]['id']}
-                    self.api.post('/v1/user/sell_limit', json=req)
+                    if not self.config['dry_run_mode']:
+                        self.api.post('/v1/user/sell_limit', json=req)
 
     def check_for_rebalance(self, allocation_profile, orders):
         for market, profile in allocation_profile.items():
@@ -204,6 +212,7 @@ class OrderbookManager:
         return self.check_for_rebalance(allocation_profile, self.get_orders())
 
     async def monitor(self):
+        await asyncio.sleep(self.config['monitor_period']*2)
         while True:
             log.info("Monitoring market data...")
             allocs = self.compute_allocations()

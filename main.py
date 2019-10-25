@@ -28,8 +28,8 @@ def cli(ctx, config, endpoint, keyfile, verbose):
     hmac_key = keyfile.read().strip()
     config = yaml.load(config)
 
-    ctx.obj['obm'] = OrderbookManager(endpoint, hmac_key, config['orderbook_manager'])
     ctx.obj['mdc'] = MarketDataCollector(config['market_data_collector'])
+    ctx.obj['obm'] = OrderbookManager(endpoint, hmac_key, config['orderbook_manager'])
 
 
 @cli.command()
