@@ -92,5 +92,21 @@ def update_orders_test(ctx):
     print(ctx.obj['obm'].update_orders())
 
 
+@cli.command()
+@click.pass_context
+def rebalance_orders_test(ctx):
+    ctx.obj['mdc'].update_tickers()
+    ctx.obj['mdc'].update_midpoints()
+    print(ctx.obj['obm'].rebalance_orders_test())
+
+
+@cli.command()
+@click.pass_context
+def check_for_rebalance_test(ctx):
+    ctx.obj['mdc'].update_tickers()
+    ctx.obj['mdc'].update_midpoints()
+    print(ctx.obj['obm'].check_for_rebalance_test())
+
+
 if __name__ == "__main__":
     cli(obj={})

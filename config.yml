@@ -8,17 +8,19 @@ orderbook_manager:
     DOGE: 100
     BTC: 0.00001
 
-  intervals:
+  intervals: # can't place all orders if ratios add to 1?
     buy:
-      0.02: 0.2
-      0.04: 0.5
-      0.05: 0.3
+      #0.02: 0.2
+      0.04: 0.6
+      0.05: 0.4
     sell:
-      0.02: 0.2
-      0.04: 0.5
-      0.05: 0.3
+      #0.02: 0.2
+      0.04: 0.6
+      0.05: 0.4
   monitor_period: 3
-  reserve_margin: .05
+  reserve_tolerance: .05
+  price_tolerance: .05
+  amount_tolerance: .05
 
 market_data_collector:
   update_period: 3

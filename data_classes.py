@@ -18,6 +18,3 @@ class PrivateDatastore:
     balances = {
 
     }
-    qtrade_market_map = {
-
-    }
