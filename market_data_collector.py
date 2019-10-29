@@ -6,7 +6,7 @@ from market_scrapers import QTradeScraper, BittrexScraper
 
 scraper_classes = {
     "qtrade": QTradeScraper,
-    #"bittrex": BittrexScraper
+    "bittrex": BittrexScraper
 }
 
 log = logging.getLogger('mdc')
@@ -19,12 +19,12 @@ class MarketDataCollector:
         # load scrapers
         self.scrapers = []
         for name, cfg in self.config['scrapers'].items():
-            self.scrapers.append(scraper_classes[name](market_name=name, **cfg))
+            self.scrapers.append(scraper_classes[name](exchange_name=name, **cfg))
 
     def update_tickers(self):
         log.debug("Updating tickers...")
         for s in self.scrapers:
-            ExchangeDatastore.tickers[s.market_name] = s.scrape_ticker()
+            ExchangeDatastore.tickers[s.exchange_name] = s.scrape_ticker()
 
     def update_midpoints(self):  # be sure to update tickers first
         log.debug("Updating midpoints...")

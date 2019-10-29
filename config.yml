@@ -26,11 +26,12 @@ orderbook_manager:
   price_tolerance: .01
   amount_tolerance: .05
   dry_run_mode: True
+  prevent_taker: True
 
 market_data_collector:
   update_period: 60
   scrapers:
     qtrade:
-      markets: ['DOGE_BTC']
-    #bittrex:
-    #  markets: ['BTC-DOGE']
+      markets: {'DOGE_BTC':'DOGE_BTC'}
+    bittrex:
+      markets: {'BTC-DOGE':'DOGE_BTC'}

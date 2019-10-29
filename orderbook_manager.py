@@ -90,7 +90,7 @@ class OrderbookManager:
             buy_allocs.append((slip, amount))
         for slip, ratio in self.config['intervals']['sell'].items():
             ratio = Decimal(ratio)
-            amount = (market_alloc * Decimal(ratio)).quantize(COIN)
+            amount = (market_alloc * ratio).quantize(COIN)
             sell_allocs.append((slip, amount))
         return {'buy': buy_allocs, 'sell': sell_allocs}
 
@@ -228,7 +228,8 @@ class OrderbookManager:
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            midpoint = ExchangeDatastore.midpoints['qtrade'][market]
+            mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
+            midpoint = sum(mids)/len(mids)
             allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
         return self.rebalance_orders(allocation_profile, self.get_orders())
 
@@ -236,7 +237,8 @@ class OrderbookManager:
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            midpoint = ExchangeDatastore.midpoints['qtrade'][market]
+            mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
+            midpoint = sum(mids)/len(mids)
             allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
         return self.check_for_rebalance(allocation_profile, self.get_orders())
 

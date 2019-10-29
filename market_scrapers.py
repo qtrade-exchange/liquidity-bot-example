@@ -1,10 +1,15 @@
 import sys
+import requests
+import yaml
+import json
+
 import logging as log
 from decimal import Decimal
-import requests
+from pprint import pprint
 
 from qtrade_client.api import QtradeAPI
 
+COIN = Decimal('.00000001')
 
 class APIScraper:
     def __init__(self, **kwargs):
@@ -22,17 +27,17 @@ class QTradeScraper(APIScraper):
 
     def scrape_ticker(self):
         tickers = {}
-        for market in self.markets:
+        for market, qmarket in self.markets.items():
             res = self.api.get("/v1/ticker/{}".format(market))
 
-            log.debug("Ticker %s from %s was acquired successfully", market, self.market_name)
-            bid = Decimal(res["bid"])
+            log.debug("Ticker %s from %s was acquired successfully", market, self.exchange_name)
+            bid = Decimal(res["bid"]).quantize(COIN)
             log.debug("Bid price is %s", bid)
-            last = Decimal(res["last"])
+            last = Decimal(res["last"]).quantize(COIN)
             log.debug("Last price is %s", last)
-            ask = Decimal(res["ask"])
+            ask = Decimal(res["ask"]).quantize(COIN)
             log.debug("Ask price is %s", ask)
-            tickers[market] = {"bid": bid, "last": last, "ask": ask}
+            tickers[qmarket] = {"bid": bid, "last": last, "ask": ask}
         return tickers
 
 
@@ -42,21 +47,26 @@ class BittrexScraper(APIScraper):
 
     def scrape_ticker(self):
         tickers = {}
-        for market in self.markets:
-            res = requests.get('https://api.bittrex.com/api/v1.1/public/getticker?market=' + market)
+        for market, qmarket in self.markets.items():
+            res = json.loads(requests.get('https://api.bittrex.com/api/v1.1/public/getticker?market=' + market).content)
 
-            log.debug("Ticker %s from %s was acquired successfully", market, self.market_name)
-            bid = Decimal(res["bid"])
+            if not res['success']:
+                log.warning("Could not acquire ticker %s from %s", market, self.exchange_name)
+                return
+
+            log.debug("Ticker %s from %s was acquired successfully", market, self.exchange_name)
+            bid = Decimal(res["result"]["Bid"]).quantize(COIN)
             log.debug("Bid price is %s", bid)
-            last = Decimal(res["last"])
+            last = Decimal(res["result"]["Last"]).quantize(COIN)
             log.debug("Last price is %s", last)
-            ask = Decimal(res["ask"])
+            ask = Decimal(res["result"]["Ask"]).quantize(COIN)
             log.debug("Ask price is %s", ask)
-            tickers[market] = {"bid": bid, "last": last, "ask": ask}
+            tickers[qmarket] = {"bid": bid, "last": last, "ask": ask}
+        return tickers
 
 
 if __name__ == "__main__":
-    log_level = log.INFO
+    log_level = log.DEBUG
 
     root = log.getLogger()
     root.setLevel(log_level)
@@ -67,4 +77,7 @@ if __name__ == "__main__":
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
-    QTradeScraper()
+    config = yaml.load(open('config.yml'))['market_data_collector']
+
+    pprint(BittrexScraper(exchange_name='bittrex', markets=config['scrapers']['bittrex']['markets']).scrape_ticker())
+    pprint(QTradeScraper(exchange_name='qtrade', markets=config['scrapers']['qtrade']['markets']).scrape_ticker())
