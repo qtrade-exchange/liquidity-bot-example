@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from data_classes import ExchangeDatastore, PrivateDatastore
 from market_scrapers import QTradeScraper
-from qtrade_client.api import QtradeAPI
+from qtrade_client.api import QtradeAPI, APIException
 
 COIN = Decimal('.00000001')
 PERC = Decimal('.01')
@@ -138,10 +138,13 @@ class OrderbookManager:
         log.info("Place {:>10} on {string} {:>15} {market_currency} for {:>15.8f} {base_currency} each"
                  .format(order_type, amount, price, **market))
         if self.config['dry_run_mode'] is False:
-            self.api.post('/v1/user/{}'.format(order_type),
+            try:
+                self.api.post('/v1/user/{}'.format(order_type),
                           amount=str(amount),
                           price=str(price),
                           market_id=market['id'])
+            except APIException as err:
+                log.warning("APIException: %s", err)
 
     def check_for_rebalance(self, allocation_profile, orders):
         for market, profile in allocation_profile.items():
