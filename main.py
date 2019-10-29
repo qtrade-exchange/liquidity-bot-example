@@ -21,7 +21,8 @@ def cli(ctx, config, endpoint, keyfile, verbose):
     root.setLevel(log_level)
     handler = log.StreamHandler(sys.stdout)
     handler.setLevel(log_level)
-    formatter = log.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = log.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     root.addHandler(handler)
 
@@ -29,7 +30,8 @@ def cli(ctx, config, endpoint, keyfile, verbose):
     config = yaml.load(config)
 
     ctx.obj['mdc'] = MarketDataCollector(config['market_data_collector'])
-    ctx.obj['obm'] = OrderbookManager(endpoint, hmac_key, config['orderbook_manager'])
+    ctx.obj['obm'] = OrderbookManager(
+        endpoint, hmac_key, config['orderbook_manager'])
 
 
 @cli.command()
@@ -83,7 +85,8 @@ def allocate_orders_test(ctx):
 def price_orders_test(ctx):
     allocs = ctx.obj['obm'].compute_allocations()
     a = allocs.popitem()[1]
-    print(ctx.obj['obm'].price_orders(ctx.obj['obm'].allocate_orders(a[0], a[1]), 0.0000033))
+    print(ctx.obj['obm'].price_orders(
+        ctx.obj['obm'].allocate_orders(a[0], a[1]), 0.0000033))
 
 
 @cli.command()

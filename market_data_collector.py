@@ -13,13 +13,15 @@ log = logging.getLogger('mdc')
 
 
 class MarketDataCollector:
+
     def __init__(self, config):
         # load config from yaml file
         self.config = config
         # load scrapers
         self.scrapers = []
         for name, cfg in self.config['scrapers'].items():
-            self.scrapers.append(scraper_classes[name](exchange_name=name, **cfg))
+            self.scrapers.append(
+                scraper_classes[name](exchange_name=name, **cfg))
 
     def update_tickers(self):
         log.debug("Updating tickers...")
@@ -33,7 +35,8 @@ class MarketDataCollector:
                 bid = ticker["bid"]
                 last = ticker["last"]
                 ExchangeDatastore.midpoints.setdefault(exchange_name, {})
-                ExchangeDatastore.midpoints[exchange_name][market] = (bid + last) / 2
+                ExchangeDatastore.midpoints[exchange_name][
+                    market] = (bid + last) / 2
 
     async def daemon(self):
         while True:

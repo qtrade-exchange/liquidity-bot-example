@@ -14,6 +14,7 @@ log = logging.getLogger('obm')
 
 
 class OrderbookManager:
+
     def __init__(self, endpoint, key, config):
         self.config = config
         self.api = QtradeAPI(endpoint, key=key)
@@ -65,7 +66,8 @@ class OrderbookManager:
             # TODO: removing fees isn't really part of allocating the funds,
             # it's part of placing the orders. Move this logic downstream for
             # clarity
-            base_fee = (base_amount * Decimal(market['taker_fee'])).quantize(COIN, rounding='ROUND_UP')
+            base_fee = (
+                base_amount * Decimal(market['taker_fee'])).quantize(COIN, rounding='ROUND_UP')
             base_amount -= base_fee
             allocs[market_string] = (market_amount, base_amount)
         return allocs
@@ -122,7 +124,8 @@ class OrderbookManager:
             return
 
         if self.config['dry_run_mode']:
-            log.warning("You are in dry run mode! Orders will not be cancelled or placed!")
+            log.warning(
+                "You are in dry run mode! Orders will not be cancelled or placed!")
         else:
             self.cancel_all_orders(orders)
 
@@ -140,9 +143,9 @@ class OrderbookManager:
         if self.config['dry_run_mode'] is False:
             try:
                 self.api.post('/v1/user/{}'.format(order_type),
-                          amount=str(amount),
-                          price=str(price),
-                          market_id=market['id'])
+                              amount=str(amount),
+                              price=str(price),
+                              market_id=market['id'])
             except APIException as err:
                 log.warning("APIException: %s", err)
 
@@ -150,56 +153,69 @@ class OrderbookManager:
         for market, profile in allocation_profile.items():
             for price, amount in profile['buy']:
                 try:
-                    price_diff = min([abs(price - o['price']) / price for o in orders[market]['buy']])
+                    price_diff = min(
+                        [abs(price - o['price']) / price for o in orders[market]['buy']])
                 except(ValueError, KeyError):
                     log.info("Rebalance! No %s buy orders are placed!", market)
                     return True
                 if price_diff >= self.config['price_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s buy order price", str((price_diff*100).quantize(PERC)), market)
+                    log.info("Rebalance! %s%% difference in %s buy order price", str(
+                        (price_diff * 100).quantize(PERC)), market)
                     return True
                 try:
-                    amount_diff = min([abs(amount - o['market_amount_remaining']*o['price']) / amount for o in orders[market]['buy']])
+                    amount_diff = min([abs(amount - o['market_amount_remaining']
+                                           * o['price']) / amount for o in orders[market]['buy']])
                 except(ValueError, KeyError):
                     log.info("Rebalance! No %s buy orders are placed!", market)
                     return True
                 if amount_diff >= self.config['amount_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s buy order amount", str((amount_diff*100).quantize(PERC)), market)
+                    log.info("Rebalance! %s%% difference in %s buy order amount", str(
+                        (amount_diff * 100).quantize(PERC)), market)
                     return True
 
             for price, amount in profile['sell']:
                 try:
-                    price_diff = min([abs(price - o['price']) / price for o in orders[market]['sell']])
+                    price_diff = min(
+                        [abs(price - o['price']) / price for o in orders[market]['sell']])
                 except(ValueError, KeyError):
                     log.info("Rebalance! No %s sell orders are placed!", market)
                     return True
                 if price_diff >= self.config['price_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s sell order price", str((price_diff*100).quantize(PERC)), market)
+                    log.info("Rebalance! %s%% difference in %s sell order price", str(
+                        (price_diff * 100).quantize(PERC)), market)
                     return True
                 try:
-                    amount_diff = min([abs(amount - o['market_amount_remaining']) / amount for o in orders[market]['sell']])
+                    amount_diff = min(
+                        [abs(amount - o['market_amount_remaining']) / amount for o in orders[market]['sell']])
                 except(ValueError, KeyError):
                     log.info("Rebalance! No %s sell orders are placed!", market)
                     return True
                 if amount_diff >= self.config['amount_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s sell order amount", str((amount_diff*100).quantize(PERC)), market)
+                    log.info("Rebalance! %s%% difference in %s sell order amount", str(
+                        (amount_diff * 100).quantize(PERC)), market)
                     return True
 
         for coin, bal in self.api.balances().items():
             bal = Decimal(bal)
-            reserve_diff = (Decimal(self.config['currency_reserves'][coin]) - bal) / bal
+            reserve_diff = (
+                Decimal(self.config['currency_reserves'][coin]) - bal) / bal
             if reserve_diff >= self.config['reserve_tolerance']:
-                log.info("Rebalance! %s%% difference in %s reserve", str((reserve_diff*100).quantize(PERC)), coin)
+                log.info("Rebalance! %s%% difference in %s reserve",
+                         str((reserve_diff * 100).quantize(PERC)), coin)
                 return True
+        return False
 
     def cancel_all_orders(self, orders):
         log.info("Cancelling all orders...")
         for market, m_ords in orders.items():
             for bo in m_ords['buy']:
                 log.debug("Cancelling order %s", bo['id'])
-                self.api.post("https://api.qtrade.io/v1/user/cancel_order", json={"id":bo['id']})
+                self.api.post(
+                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": bo['id']})
             for so in m_ords['sell']:
                 log.debug("Cancelling order %s", so['id'])
-                self.api.post("https://api.qtrade.io/v1/user/cancel_order", json={"id":so['id']})
+                self.api.post(
+                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": so['id']})
 
     def get_orders(self):
         orders = self.api.get("/v1/user/orders")["orders"]
@@ -208,9 +224,11 @@ class OrderbookManager:
         sorted_orders = {}
         for o in orders:
             if o['open']:
-                mi = self.api.get("/v1/market/" + str(o['market_id']))['market']
+                mi = self.api.get(
+                    "/v1/market/" + str(o['market_id']))['market']
                 o['price'] = Decimal(o['price'])
-                o['market_amount_remaining'] = Decimal(o['market_amount_remaining'])
+                o['market_amount_remaining'] = Decimal(
+                    o['market_amount_remaining'])
                 o['base_amount'] = o['price'] * o['market_amount_remaining']
                 market = mi['market_currency'] + '_' + mi['base_currency']
                 sorted_orders.setdefault(market, {'buy': [], 'sell': []})
@@ -220,8 +238,10 @@ class OrderbookManager:
                     sorted_orders[market]['buy'].append(o)
         log.debug("Active buy orders: %s", sorted_orders)
 
-        log.info("%s active buy orders", sum([len(market['buy']) for market in sorted_orders.values()]))
-        log.info("%s active sell orders", sum([len(market['sell']) for market in sorted_orders.values()]))
+        log.info("%s active buy orders", sum(
+            [len(market['buy']) for market in sorted_orders.values()]))
+        log.info("%s active sell orders", sum(
+            [len(market['sell']) for market in sorted_orders.values()]))
         return sorted_orders
 
     def buy_sell_bias(self):
@@ -232,8 +252,9 @@ class OrderbookManager:
         allocation_profile = {}
         for market, a in allocs.items():
             mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
-            midpoint = sum(mids)/len(mids)
-            allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
+            midpoint = sum(mids) / len(mids)
+            allocation_profile[market] = self.price_orders(
+                self.allocate_orders(a[0], a[1]), midpoint)
         return self.rebalance_orders(allocation_profile, self.get_orders())
 
     def check_for_rebalance_test(self):
@@ -241,20 +262,23 @@ class OrderbookManager:
         allocation_profile = {}
         for market, a in allocs.items():
             mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
-            midpoint = sum(mids)/len(mids)
-            allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
+            midpoint = sum(mids) / len(mids)
+            allocation_profile[market] = self.price_orders(
+                self.allocate_orders(a[0], a[1]), midpoint)
         return self.check_for_rebalance(allocation_profile, self.get_orders())
 
     async def monitor(self):
         # Sleep to allow data scrapers to populate
         await asyncio.sleep(2)
 
-        log.info("Starting orderbook manager; interval period %s sec", self.config['monitor_period'])
+        log.info("Starting orderbook manager; interval period %s sec",
+                 self.config['monitor_period'])
         while True:
             allocs = self.compute_allocations()
             allocation_profile = {}
             for market, a in allocs.items():
                 midpoint = ExchangeDatastore.midpoints['qtrade'][market]
-                allocation_profile[market] = self.price_orders(self.allocate_orders(a[0], a[1]), midpoint)
+                allocation_profile[market] = self.price_orders(
+                    self.allocate_orders(a[0], a[1]), midpoint)
             self.rebalance_orders(allocation_profile, self.get_orders())
             await asyncio.sleep(self.config['monitor_period'])
