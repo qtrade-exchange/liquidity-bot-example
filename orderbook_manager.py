@@ -205,17 +205,18 @@ class OrderbookManager:
                 return True
         return False
 
-    def cancel_all_orders(self, orders):
+    def cancel_all_orders(self):  # , orders):
         log.info("Cancelling all orders...")
-        for market, m_ords in orders.items():
-            for bo in m_ords['buy']:
-                log.debug("Cancelling order %s", bo['id'])
-                self.api.post(
-                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": bo['id']})
-            for so in m_ords['sell']:
-                log.debug("Cancelling order %s", so['id'])
-                self.api.post(
-                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": so['id']})
+        self.api.cancel_all_orders()
+#        for market, m_ords in orders.items():
+#            for bo in m_ords['buy']:
+#                log.debug("Cancelling order %s", bo['id'])
+#                self.api.post(
+#                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": bo['id']})
+#            for so in m_ords['sell']:
+#                log.debug("Cancelling order %s", so['id'])
+#                self.api.post(
+#                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": so['id']})
 
     def get_orders(self):
         orders = self.api.get("/v1/user/orders")["orders"]
@@ -274,11 +275,14 @@ class OrderbookManager:
         log.info("Starting orderbook manager; interval period %s sec",
                  self.config['monitor_period'])
         while True:
-            allocs = self.compute_allocations()
-            allocation_profile = {}
-            for market, a in allocs.items():
-                midpoint = ExchangeDatastore.midpoints['qtrade'][market]
-                allocation_profile[market] = self.price_orders(
-                    self.allocate_orders(a[0], a[1]), midpoint)
-            self.rebalance_orders(allocation_profile, self.get_orders())
-            await asyncio.sleep(self.config['monitor_period'])
+            try:
+                allocs = self.compute_allocations()
+                allocation_profile = {}
+                for market, a in allocs.items():
+                    midpoint = ExchangeDatastore.midpoints['qtrade'][market]
+                    allocation_profile[market] = self.price_orders(
+                        self.allocate_orders(a[0], a[1]), midpoint)
+                self.rebalance_orders(allocation_profile, self.get_orders())
+                await asyncio.sleep(self.config['monitor_period'])
+            except ConnectionError as err:
+                log.warning("ConnectionError: %s", err, exc_info=True)

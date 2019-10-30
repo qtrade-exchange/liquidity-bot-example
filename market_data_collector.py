@@ -40,7 +40,10 @@ class MarketDataCollector:
 
     async def daemon(self):
         while True:
-            log.info("Pulling market data...")
-            self.update_tickers()
-            self.update_midpoints()
-            await asyncio.sleep(self.config["update_period"])
+            try:
+                log.info("Pulling market data...")
+                self.update_tickers()
+                self.update_midpoints()
+                await asyncio.sleep(self.config["update_period"])
+            except ConnectionError as err:
+                log.warning("ConnectionError: %s", err, exc_info=True)

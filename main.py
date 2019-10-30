@@ -94,6 +94,11 @@ def price_orders_test(ctx):
 def update_orders_test(ctx):
     print(ctx.obj['obm'].update_orders())
 
+@cli.command()
+@click.pass_context
+def cancel_orders_test(ctx):
+    print(ctx.obj['obm'].cancel_all_orders())
+
 
 @cli.command()
 @click.pass_context
