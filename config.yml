@@ -8,7 +8,7 @@ orderbook_manager:
     DOGE: 100
     BTC: 0.00001
 
-  intervals: # can't place all orders if ratios add to 1?
+  intervals:
     buy:
       0.03: 0.2
       0.05: 0.3
@@ -25,7 +25,7 @@ orderbook_manager:
   reserve_tolerance: .05
   price_tolerance: .01
   amount_tolerance: .05
-  dry_run_mode: False
+  dry_run_mode: True
   prevent_taker: True
 
 market_data_collector:

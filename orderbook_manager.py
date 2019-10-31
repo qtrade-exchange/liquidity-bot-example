@@ -7,6 +7,8 @@ from data_classes import ExchangeDatastore, PrivateDatastore
 from market_scrapers import QTradeScraper
 from qtrade_client.api import QtradeAPI, APIException
 
+from pprint import pprint
+
 COIN = Decimal('.00000001')
 PERC = Decimal('.01')
 
@@ -18,13 +20,6 @@ class OrderbookManager:
     def __init__(self, endpoint, key, config):
         self.config = config
         self.api = QtradeAPI(endpoint, key=key)
-
-        # Index our market information by market string
-        markets = self.api.get("/v1/markets")['markets']
-        # Set some convenience keys so we can pass around just the dict
-        for m in markets:
-            m['string'] = "{market_currency}_{base_currency}".format(**m)
-        self.market_map = {m['string']: m for m in markets}
 
     def compute_allocations(self):
         """ Given our allocation % targets and our current balances, figure out
@@ -39,7 +34,7 @@ class OrderbookManager:
         reserve_config = self.config['currency_reserves']
         allocs = {}
         for market_string, market_alloc in self.config['market_allocations'].items():
-            market = self.market_map[market_string]
+            market = self.api.markets[market_string]
 
             def allocate_coin(coin):
                 """ Factor in allocation precentage and reserve amount to
@@ -51,8 +46,8 @@ class OrderbookManager:
                 post_reserve = balances[coin] - reserve
                 return post_reserve * alloc_perc
 
-            market_amount = allocate_coin(market['market_currency'])
-            base_amount = allocate_coin(market['base_currency'])
+            market_amount = allocate_coin(market['market_currency']['code'])
+            base_amount = allocate_coin(market['base_currency']['code'])
 
             # TODO: At some point COIN will need to be based off base currency
             # precision. Not needed until we have ETH base markets really
@@ -83,7 +78,7 @@ class OrderbookManager:
             sell_allocs.append((slip, amount))
         return {'buy': buy_allocs, 'sell': sell_allocs}
 
-    def price_orders(self, orders, midpoint):
+    def price_orders(self, orders, bid, ask):
         """
         return {
             "buy": [
@@ -97,11 +92,11 @@ class OrderbookManager:
         priced_buy_orders = []
         for slip, amount in orders['sell']:
             slip = Decimal(slip)
-            price = (midpoint + (midpoint * slip)).quantize(COIN)
+            price = (ask + (ask * slip)).quantize(COIN)
             priced_sell_orders.append((price, amount))
         for slip, amount in orders['buy']:
             slip = Decimal(slip)
-            price = (midpoint - (midpoint * slip)).quantize(COIN)
+            price = (bid - (bid * slip)).quantize(COIN)
             priced_buy_orders.append((price, amount))
         return {'buy': priced_buy_orders, 'sell': priced_sell_orders}
 
@@ -112,12 +107,12 @@ class OrderbookManager:
         if self.config['dry_run_mode']:
             log.warning(
                 "You are in dry run mode! Orders will not be cancelled or placed!")
+            pprint(allocation_profile)
             return
 
         self.api.cancel_all_orders()
 
         for market_string, profile in allocation_profile.items():
-            # market = self.market_map[market_string]
             for price, value in profile['buy']:
                 self.api.order('buy_limit', price, value=value,
                                market_string=market_string, prevent_taker=self.config['prevent_taker'])
@@ -225,15 +220,23 @@ class OrderbookManager:
     def buy_sell_bias(self):
         return (.5, .5)
 
-    def rebalance_orders_test(self):
+    def generate_orders(self, force_rebalance=False):
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
-            midpoint = sum(mids) / len(mids)
+            # mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
+            # midpoint = sum(mids) / len(mids)
+            bids = [m[market]['bid']
+                    for e, m in ExchangeDatastore.tickers.items()]
+            avg_bid = sum(bids) / len(bids)
+            asks = [m[market]['ask']
+                    for e, m in ExchangeDatastore.tickers.items()]
+            avg_ask = sum(asks) / len(asks)
+            log.info("Generating %s orders with bid %s and ask %s",
+                     market, avg_bid, avg_ask)
             allocation_profile[market] = self.price_orders(
-                self.allocate_orders(a[0], a[1]), midpoint)
-        return self.rebalance_orders(allocation_profile, self.get_orders())
+                self.allocate_orders(a[0], a[1]), avg_bid, avg_ask)
+        self.rebalance_orders(allocation_profile, self.get_orders(), force=force_rebalance)
 
     async def monitor(self):
         # Sleep to allow data scrapers to populate
@@ -243,14 +246,7 @@ class OrderbookManager:
                  self.config['monitor_period'])
         while True:
             try:
-                log.info("Monitoring market data...")
-                allocs = self.compute_allocations()
-                allocation_profile = {}
-                for market, a in allocs.items():
-                    midpoint = ExchangeDatastore.midpoints['qtrade'][market]
-                    allocation_profile[market] = self.price_orders(
-                        self.allocate_orders(a[0], a[1]), midpoint)
-                self.rebalance_orders(allocation_profile, self.get_orders())
+                self.generate_orders()
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)

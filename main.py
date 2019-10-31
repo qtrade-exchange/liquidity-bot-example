@@ -111,7 +111,7 @@ def cancel_orders_test(ctx):
 def rebalance_orders_test(ctx):
     ctx.obj['mdc'].update_tickers()
     ctx.obj['mdc'].update_midpoints()
-    print(ctx.obj['obm'].rebalance_orders_test())
+    print(ctx.obj['obm'].generate_orders(force_rebalance=True))
 
 
 if __name__ == "__main__":
