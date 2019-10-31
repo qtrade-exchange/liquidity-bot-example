@@ -38,9 +38,15 @@ def cli(ctx, config, endpoint, keyfile, verbose):
 @click.pass_context
 def run(ctx):
     loop = asyncio.get_event_loop()
-    loop.create_task(ctx.obj['obm'].monitor())
-    loop.create_task(ctx.obj['mdc'].daemon())
-    loop.run_forever()
+    try:
+        loop.create_task(ctx.obj['obm'].monitor())
+        loop.create_task(ctx.obj['mdc'].daemon())
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("Closing Loop")
+        loop.close()
 
 
 @cli.command()

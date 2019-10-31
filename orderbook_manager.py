@@ -252,5 +252,5 @@ class OrderbookManager:
                         self.allocate_orders(a[0], a[1]), midpoint)
                 self.rebalance_orders(allocation_profile, self.get_orders())
                 await asyncio.sleep(self.config['monitor_period'])
-            except ConnectionError as err:
-                log.warning("ConnectionError: %s", err, exc_info=True)
+            except Exception:
+                log.warning("Orderbook manager loop exploded", exc_info=True)

@@ -47,5 +47,5 @@ class MarketDataCollector:
                 self.update_tickers()
                 self.update_midpoints()
                 await asyncio.sleep(self.config["update_period"])
-            except ConnectionError as err:
-                log.warning("ConnectionError: %s", err, exc_info=True)
+            except Exception:
+                log.warning("Market scraper loop exploded", exc_info=True)
