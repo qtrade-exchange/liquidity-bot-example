@@ -39,6 +39,8 @@ class MarketDataCollector:
                     market] = (bid + last) / 2
 
     async def daemon(self):
+        log.info("Starting market data collector; interval period %s sec",
+                 self.config['update_period'])
         while True:
             try:
                 log.info("Pulling market data...")

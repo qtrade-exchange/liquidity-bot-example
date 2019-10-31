@@ -62,8 +62,7 @@ def obm(ctx):
 @cli.command()
 @click.pass_context
 def balances_test(ctx):
-    ba = ctx.obj['obm'].api.get("/v1/user/balances_all")
-    print(ba)
+    print(ctx.obj['obm'].api.balances_merged())
 
 
 @cli.command()
@@ -92,12 +91,13 @@ def price_orders_test(ctx):
 @cli.command()
 @click.pass_context
 def update_orders_test(ctx):
-    print(ctx.obj['obm'].update_orders())
+    ctx.obj['obm'].update_orders()
+
 
 @cli.command()
 @click.pass_context
 def cancel_orders_test(ctx):
-    print(ctx.obj['obm'].cancel_all_orders())
+    ctx.obj['obm'].api.cancel_all_orders()
 
 
 @cli.command()
@@ -106,14 +106,6 @@ def rebalance_orders_test(ctx):
     ctx.obj['mdc'].update_tickers()
     ctx.obj['mdc'].update_midpoints()
     print(ctx.obj['obm'].rebalance_orders_test())
-
-
-@cli.command()
-@click.pass_context
-def check_for_rebalance_test(ctx):
-    ctx.obj['mdc'].update_tickers()
-    ctx.obj['mdc'].update_midpoints()
-    print(ctx.obj['obm'].check_for_rebalance_test())
 
 
 if __name__ == "__main__":

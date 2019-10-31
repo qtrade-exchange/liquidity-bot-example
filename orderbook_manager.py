@@ -26,14 +26,6 @@ class OrderbookManager:
             m['string'] = "{market_currency}_{base_currency}".format(**m)
         self.market_map = {m['string']: m for m in markets}
 
-    def get_balances(self):
-        b_data = self.api.get("/v1/user/balances_all")
-        balances = {}
-        for b in b_data['balances'] + b_data['order_balances']:
-            balances.setdefault(b['currency'], 0)
-            balances[b['currency']] += Decimal(b['balance'])
-        return balances
-
     def compute_allocations(self):
         """ Given our allocation % targets and our current balances, figure out
         how much market and base currency we would _ideally_ be
@@ -42,7 +34,8 @@ class OrderbookManager:
             "DOGE_BTC": [1200, 0.0012],
         }
         """
-        balances = self.get_balances()
+        balances = {c: Decimal(b)
+                    for c, b in self.api.balances_merged().items()}
         reserve_config = self.config['currency_reserves']
         allocs = {}
         for market_string, market_alloc in self.config['market_allocations'].items():
@@ -63,12 +56,6 @@ class OrderbookManager:
 
             # TODO: At some point COIN will need to be based off base currency
             # precision. Not needed until we have ETH base markets really
-            # TODO: removing fees isn't really part of allocating the funds,
-            # it's part of placing the orders. Move this logic downstream for
-            # clarity
-            base_fee = (
-                base_amount * Decimal(market['taker_fee'])).quantize(COIN, rounding='ROUND_UP')
-            base_amount -= base_fee
             allocs[market_string] = (market_amount, base_amount)
         return allocs
 
@@ -106,7 +93,6 @@ class OrderbookManager:
                 (0.00000034, 1250),
             ]
         } """
-        midpoint = Decimal(midpoint)
         priced_sell_orders = []
         priced_buy_orders = []
         for slip, amount in orders['sell']:
@@ -126,16 +112,18 @@ class OrderbookManager:
         if self.config['dry_run_mode']:
             log.warning(
                 "You are in dry run mode! Orders will not be cancelled or placed!")
-        else:
-            self.cancel_all_orders(orders)
+            return
+
+        self.api.cancel_all_orders()
 
         for market_string, profile in allocation_profile.items():
-            market = self.market_map[market_string]
-            for price, base_amount in profile['buy']:
-                buy_amount = (base_amount / price).quantize(COIN)
-                self.order('buy_limit', buy_amount, price, market)
-            for price, amount in profile['sell']:
-                self.order('sell_limit', amount, price, market)
+            # market = self.market_map[market_string]
+            for price, value in profile['buy']:
+                self.api.order('buy_limit', price, value=value,
+                               market_string=market_string, prevent_taker=self.config['prevent_taker'])
+            for price, value in profile['sell']:
+                self.api.order('sell_limit', price, value=value,
+                               market_string=market_string, prevent_taker=self.config['prevent_taker'])
 
     def order(self, order_type, amount, price, market):
         log.info("Place {:>10} on {string} {:>15} {market_currency} for {:>15.8f} {base_currency} each"
@@ -150,6 +138,8 @@ class OrderbookManager:
                 log.warning("APIException: %s", err)
 
     def check_for_rebalance(self, allocation_profile, orders):
+        # TODO: change this function to store local order state and check
+        # orders against that
         for market, profile in allocation_profile.items():
             for price, amount in profile['buy']:
                 try:
@@ -205,19 +195,6 @@ class OrderbookManager:
                 return True
         return False
 
-    def cancel_all_orders(self):  # , orders):
-        log.info("Cancelling all orders...")
-        self.api.cancel_all_orders()
-#        for market, m_ords in orders.items():
-#            for bo in m_ords['buy']:
-#                log.debug("Cancelling order %s", bo['id'])
-#                self.api.post(
-#                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": bo['id']})
-#            for so in m_ords['sell']:
-#                log.debug("Cancelling order %s", so['id'])
-#                self.api.post(
-#                    "https://api.qtrade.io/v1/user/cancel_order", json={"id": so['id']})
-
     def get_orders(self):
         orders = self.api.get("/v1/user/orders")["orders"]
 
@@ -258,16 +235,6 @@ class OrderbookManager:
                 self.allocate_orders(a[0], a[1]), midpoint)
         return self.rebalance_orders(allocation_profile, self.get_orders())
 
-    def check_for_rebalance_test(self):
-        allocs = self.compute_allocations()
-        allocation_profile = {}
-        for market, a in allocs.items():
-            mids = [m[market] for e, m in ExchangeDatastore.midpoints.items()]
-            midpoint = sum(mids) / len(mids)
-            allocation_profile[market] = self.price_orders(
-                self.allocate_orders(a[0], a[1]), midpoint)
-        return self.check_for_rebalance(allocation_profile, self.get_orders())
-
     async def monitor(self):
         # Sleep to allow data scrapers to populate
         await asyncio.sleep(2)
@@ -276,6 +243,7 @@ class OrderbookManager:
                  self.config['monitor_period'])
         while True:
             try:
+                log.info("Monitoring market data...")
                 allocs = self.compute_allocations()
                 allocation_profile = {}
                 for market, a in allocs.items():

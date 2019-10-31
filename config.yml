@@ -25,7 +25,7 @@ orderbook_manager:
   reserve_tolerance: .05
   price_tolerance: .01
   amount_tolerance: .05
-  dry_run_mode: True
+  dry_run_mode: False
   prevent_taker: True
 
 market_data_collector:
