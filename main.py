@@ -12,7 +12,7 @@ from orderbook_manager import OrderbookManager
 @click.option('--config', '-c', default="config.yml", type=click.File())
 @click.option('--endpoint', '-e', default="https://api.qtrade.io", help='qtrade backend endpoint')
 @click.option('--keyfile', '-f', default="lpbot_hmac.txt", help='a file with the hmac key', type=click.File('r'))
-@click.option('--verbose', '-v', default=False)
+@click.option('--verbose', '-v', default=False, is_flag=True)
 @click.pass_context
 def cli(ctx, config, endpoint, keyfile, verbose):
     log_level = "DEBUG" if verbose is True else "INFO"
@@ -102,16 +102,16 @@ def update_orders_test(ctx):
 
 @cli.command()
 @click.pass_context
-def cancel_orders_test(ctx):
+def cancel_all_test(ctx):
     ctx.obj['obm'].api.cancel_all_orders()
 
 
 @cli.command()
 @click.pass_context
-def rebalance_orders_test(ctx):
+def rebalance_test(ctx):
     ctx.obj['mdc'].update_tickers()
     ctx.obj['mdc'].update_midpoints()
-    print(ctx.obj['obm'].generate_orders(force_rebalance=True))
+    print(ctx.obj['obm'].generate_orders(force_rebalance=False))
 
 
 if __name__ == "__main__":
