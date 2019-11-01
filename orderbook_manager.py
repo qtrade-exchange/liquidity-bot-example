@@ -272,8 +272,6 @@ class OrderbookManager:
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            if market == 'LTC_BTC':
-                continue
             #bids = [m[market]['bid']
             #        for e, m in ExchangeDatastore.tickers.items()]
             #avg_bid = sum(bids) / len(bids)
