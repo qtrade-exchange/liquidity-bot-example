@@ -71,14 +71,14 @@ class OrderbookManager:
         """
         buy_allocs = []
         sell_allocs = []
-        for slip, ratio in self.config['intervals']['buy_limit'].items():
-            ratio = Decimal(ratio)
-            amount = (ratio * base_alloc).quantize(COIN)
-            buy_allocs.append((slip, amount))
         for slip, ratio in self.config['intervals']['sell_limit'].items():
             ratio = Decimal(ratio)
             amount = (market_alloc * ratio).quantize(COIN)
             sell_allocs.append((slip, amount))
+        for slip, ratio in self.config['intervals']['buy_limit'].items():
+            ratio = Decimal(ratio)
+            value = (base_alloc * ratio).quantize(COIN)
+            buy_allocs.append((slip, value))
         return {'buy_limit': buy_allocs, 'sell_limit': sell_allocs}
 
     def price_orders(self, orders, bid, ask):
@@ -97,10 +97,10 @@ class OrderbookManager:
             slip = Decimal(slip)
             price = (ask + (ask * slip)).quantize(COIN)
             priced_sell_orders.append((price, amount))
-        for slip, amount in orders['buy_limit']:
+        for slip, value in orders['buy_limit']:
             slip = Decimal(slip)
             price = (bid - (bid * slip)).quantize(COIN)
-            priced_buy_orders.append((price, amount))
+            priced_buy_orders.append((price, value))
         return {'buy_limit': priced_buy_orders, 'sell_limit': priced_sell_orders}
 
     def rebalance_orders(self, allocation_profile, orders, force=False):
