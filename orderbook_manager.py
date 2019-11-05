@@ -115,23 +115,33 @@ class OrderbookManager:
 
         self.api.cancel_all_orders()
 
-        # TODO: refactor this code to be less repetetive
         for market_string, profile in allocation_profile.items():
             for price, value in profile['buy_limit']:
-                if value <= 0:
-                    continue
-                self.api.order('buy_limit', price, value=value,
-                               market_string=market_string, prevent_taker=True)
-                logging.info("Placing buy_limit on %s market for %s at %s",
-                             market_string, value, price)
+                self.place_order('buy_limit', market_string, price, value)
             for price, amount in profile['sell_limit']:
-                if amount <= 0:
-                    continue
-                self.api.order('sell_limit', price, amount=amount,
-                               market_string=market_string, prevent_taker=True)
-                logging.info("Placing sell_limit on %s market for %s at %s",
-                             market_string, amount, price)
+                self.place_order('sell_limit', market_string, price, amount)
         self.prev_alloc_profile = allocation_profile
+
+    def place_order(self, order_type, market_string, price, quantity):
+        if quantity <= 0:
+            return
+        log.info("Placing %s on %s market for %s at %s",
+                 order_type, market_string, quantity, price)
+        if order_type == 'buy_limit':
+            value = quantity
+            amount = None
+        elif order_type == 'sell_limit':
+            value = None
+            amount = quantity
+        try:
+            self.api.order(order_type, price, market_string=market_string,
+                           value=value, amount=amount, prevent_taker=True)
+        except APIException as e:
+            if e.code == 400:
+                log.warning("%s for %s %s is below minimum!  Order can't be placed!", order_type,
+                            amount, self.api.markets[market_string]['market_currency']['code'])
+            else:
+                raise e
 
     def check_for_rebalance(self, allocation_profile):
         if self.prev_alloc_profile is None:
@@ -272,12 +282,6 @@ class OrderbookManager:
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            #bids = [m[market]['bid']
-            #        for e, m in ExchangeDatastore.tickers.items()]
-            #avg_bid = sum(bids) / len(bids)
-            #asks = [m[market]['ask']
-            #        for e, m in ExchangeDatastore.tickers.items()]
-            #avg_ask = sum(asks) / len(asks)
             bid = ExchangeDatastore.tickers['bittrex'][market]['bid']
             ask = ExchangeDatastore.tickers['bittrex'][market]['ask']
             log.info("Generating %s orders with bid %s and ask %s",

@@ -2,7 +2,7 @@ orderbook_manager:
   market_allocations:
     # configs are always "market_base" format
     DOGE_BTC:
-      BTC: 1
+      BTC: .7
       DOGE: 1
     LTC_BTC:
       BTC: .3
