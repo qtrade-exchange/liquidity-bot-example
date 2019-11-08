@@ -8,9 +8,9 @@ orderbook_manager:
       BTC: .3
       LTC: 1
   currency_reserves:
-    DOGE: 100
-    BTC: 0.00001
-    LTC: 0.001
+    DOGE: 0
+    BTC: 0
+    LTC: 0
 
   intervals:
     buy_limit:
@@ -25,14 +25,14 @@ orderbook_manager:
       0.09: 0.3
       0.13: 0.1
       0.20: 0.1
-  monitor_period: 10
+  monitor_period: 300
   reserve_tolerance: .05
   price_tolerance: .01
   amount_tolerance: .05
   dry_run_mode: False
 
 market_data_collector:
-  update_period: 10
+  update_period: 300
   scrapers:
     qtrade:
       markets: {'DOGE_BTC':'DOGE_BTC', 'LTC_BTC':'LTC_BTC'}

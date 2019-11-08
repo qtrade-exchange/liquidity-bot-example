@@ -102,7 +102,7 @@ def update_orders_test(ctx):
 
 @cli.command()
 @click.pass_context
-def cancel_all_test(ctx):
+def cancel_all(ctx):
     ctx.obj['obm'].api.cancel_all_orders()
 
 

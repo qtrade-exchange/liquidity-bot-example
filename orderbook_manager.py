@@ -138,8 +138,7 @@ class OrderbookManager:
                            value=value, amount=amount, prevent_taker=True)
         except APIException as e:
             if e.code == 400:
-                log.warning("%s for %s %s is below minimum!  Order can't be placed!", order_type,
-                            amount, self.api.markets[market_string]['market_currency']['code'])
+                log.warning("Caught API error!")
             else:
                 raise e
 
@@ -177,8 +176,12 @@ class OrderbookManager:
 
         for coin, bal in self.api.balances().items():
             bal = Decimal(bal)
-            res = self.config['currency_reserves'][coin]
-            reserve_diff = abs(Decimal(res) - bal) / bal
+            res = Decimal(self.config['currency_reserves'][coin])
+            if res != 0:
+                reserve_diff = abs(res - bal) / res
+            elif bal != 0:
+                log.info("Rebalance! %s balance is too high!")
+                return True
             if reserve_diff >= self.config['reserve_tolerance']:
                 if res > bal:
                     log.info("Rebalance! %s balance is %s%% lower than reserve",
