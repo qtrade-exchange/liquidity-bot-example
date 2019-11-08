@@ -309,7 +309,7 @@ class OrderbookManager:
                 except KeyError:
                     log.warning("Can't get bid price for %s!  Is it configured?", coin)
         btc_price = self.api.get('/v1/currency/BTC')['currency']['config']['price']
-        return (total_bal*Decimal(btc_price)).quantize(PERC)
+        return total_bal, (total_bal * Decimal(btc_price)).quantize(PERC)
 
     async def monitor(self):
         # Sleep to allow data scrapers to populate
@@ -320,7 +320,8 @@ class OrderbookManager:
         while True:
             try:
                 self.generate_orders()
-                log.info("Current account value is about $%s", self.estimate_account_value())
+                btc_val, usd_val = self.estimate_account_value()
+                log.info("Current account value is about $%s, %s BTC", usd_val, btc_val)
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)
