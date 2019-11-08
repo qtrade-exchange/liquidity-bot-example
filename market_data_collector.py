@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from data_classes import ExchangeDatastore, PrivateDatastore
+from data_classes import ExchangeDatastore
 from market_scrapers import QTradeScraper, BittrexScraper
 
 scraper_classes = {

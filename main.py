@@ -114,5 +114,13 @@ def rebalance_test(ctx):
     print(ctx.obj['obm'].generate_orders(force_rebalance=False))
 
 
+@cli.command()
+@click.pass_context
+def estimate_account_value(ctx):
+    ctx.obj['mdc'].update_tickers()
+    ctx.obj['mdc'].update_midpoints()
+    print(ctx.obj['obm'].estimate_account_value())
+
+
 if __name__ == "__main__":
     cli(obj={})

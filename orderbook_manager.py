@@ -291,6 +291,23 @@ class OrderbookManager:
         self.rebalance_orders(allocation_profile,
                               self.get_orders(), force=force_rebalance)
 
+    def estimate_account_value(self):
+        # convert all coin values to BTC using the Bittrex bid price
+        # then convert to USD
+        total_bal = 0
+        bals = self.api.balances_merged()
+        for coin, bal in bals.items():
+            if coin == "BTC":
+                total_bal += Decimal(bal)
+            else:
+                try:
+                    bid = ExchangeDatastore.tickers['bittrex'][coin+'_BTC']['bid']
+                    total_bal += Decimal(bal)*bid
+                except KeyError:
+                    log.warning("Can't get bid price for %s!  Is it configured?", coin)
+        btc_price = self.api.get('/v1/currency/BTC')['currency']['config']['price']
+        return (total_bal*Decimal(btc_price)).quantize(PERC)
+
     async def monitor(self):
         # Sleep to allow data scrapers to populate
         await asyncio.sleep(2)
@@ -300,6 +317,7 @@ class OrderbookManager:
         while True:
             try:
                 self.generate_orders()
+                log.info("Current account value is about $%s", self.estimate_account_value())
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)
