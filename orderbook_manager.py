@@ -177,19 +177,20 @@ class OrderbookManager:
         for coin, bal in self.api.balances().items():
             bal = Decimal(bal)
             res = Decimal(self.config['currency_reserves'][coin])
-            if res != 0:
+            if res == 0:
+                if bal != 0:
+                    log.info("Rebalance! %s balance is too high! Reserve is 0")
+                    return True
+            else:
                 reserve_diff = abs(res - bal) / res
-            elif bal != 0:
-                log.info("Rebalance! %s balance is too high!")
-                return True
-            if reserve_diff >= self.config['reserve_tolerance']:
-                if res > bal:
-                    log.info("Rebalance! %s balance is %s%% lower than reserve",
-                             coin, str((reserve_diff * 100).quantize(PERC)))
-                else:
-                    log.info("Rebalance! %s balance is %s%% higher than reserve",
-                             coin, str((reserve_diff * 100).quantize(PERC)))
-                return True
+                if reserve_diff >= self.config['reserve_tolerance']:
+                    if res > bal:
+                        log.info("Rebalance! %s balance is %s%% lower than reserve",
+                                 coin, str((reserve_diff * 100).quantize(PERC)))
+                    else:
+                        log.info("Rebalance! %s balance is %s%% higher than reserve",
+                                 coin, str((reserve_diff * 100).quantize(PERC)))
+                    return True
         return False
 
     def check_for_rebalance_old(self, allocation_profile, orders):
