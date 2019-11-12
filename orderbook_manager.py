@@ -179,7 +179,7 @@ class OrderbookManager:
             res = Decimal(self.config['currency_reserves'][coin])
             if res == 0:
                 if bal != 0:
-                    log.info("Rebalance! %s balance is too high! Reserve is 0")
+                    log.info("Rebalance! %s balance is too high! Reserve is 0", coin)
                     return True
             else:
                 reserve_diff = abs(res - bal) / res
