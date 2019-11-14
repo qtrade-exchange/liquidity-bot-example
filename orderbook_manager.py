@@ -253,6 +253,8 @@ class OrderbookManager:
         return Decimal(amt) * btc_price
 
     def coin_to_usd(self, coin, amt):
+        if coin == "BTC":
+            return self.btc_to_usd(amt)
         return self.btc_to_usd(self.coin_to_btc(coin, amt))
 
     async def monitor(self):
