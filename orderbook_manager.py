@@ -176,82 +176,15 @@ class OrderbookManager:
 
         for coin, bal in self.api.balances().items():
             bal = Decimal(bal)
+            bal_usd = self.coin_to_usd(coin, bal)
             res = Decimal(self.config['currency_reserves'][coin])
-            if res == 0:
-                if bal != 0:
-                    log.info("Rebalance! %s balance is too high! Reserve is 0", coin)
-                    return True
-            else:
-                reserve_diff = abs(res - bal) / res
-                if reserve_diff >= self.config['reserve_tolerance']:
-                    if res > bal:
-                        log.info("Rebalance! %s balance is %s%% lower than reserve",
-                                 coin, str((reserve_diff * 100).quantize(PERC)))
-                    else:
-                        log.info("Rebalance! %s balance is %s%% higher than reserve",
-                                 coin, str((reserve_diff * 100).quantize(PERC)))
-                    return True
-        return False
-
-    def check_for_rebalance_old(self, allocation_profile, orders):
-        """ Pull active orders from the API and ensure every order
-        in the profile has a market counterpart within the thresholds """
-        for market, profile in allocation_profile.items():
-            for price, amount in profile['buy']:
-                if amount == 0:
-                    continue
-                try:
-                    price_diff = min(
-                        [abs(price - o['price']) / price for o in orders[market]['buy']])
-                except(ValueError, KeyError):
-                    log.info("Rebalance! No %s buy orders are placed!", market)
-                    return True
-                if price_diff >= self.config['price_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s buy order price", str(
-                        (price_diff * 100).quantize(PERC)), market)
-                    return True
-                try:
-                    amount_diff = min([abs(amount - o['market_amount_remaining']
-                                           * o['price']) / amount for o in orders[market]['buy']])
-                except(ValueError, KeyError):
-                    log.info("Rebalance! No %s buy orders are placed!", market)
-                    return True
-                if amount_diff >= self.config['amount_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s buy order amount", str(
-                        (amount_diff * 100).quantize(PERC)), market)
-                    return True
-
-            for price, amount in profile['sell']:
-                if amount == 0:
-                    continue
-                try:
-                    price_diff = min(
-                        [abs(price - o['price']) / price for o in orders[market]['sell']])
-                except(ValueError, KeyError):
-                    log.info("Rebalance! No %s sell orders are placed!", market)
-                    return True
-                if price_diff >= self.config['price_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s sell order price", str(
-                        (price_diff * 100).quantize(PERC)), market)
-                    return True
-                try:
-                    amount_diff = min(
-                        [abs(amount - o['market_amount_remaining']) / amount for o in orders[market]['sell']])
-                except(ValueError, KeyError):
-                    log.info("Rebalance! No %s sell orders are placed!", market)
-                    return True
-                if amount_diff >= self.config['amount_tolerance']:
-                    log.info("Rebalance! %s%% difference in %s sell order amount", str(
-                        (amount_diff * 100).quantize(PERC)), market)
-                    return True
-
-        for coin, bal in self.api.balances().items():
-            bal = Decimal(bal)
-            reserve_diff = (
-                Decimal(self.config['currency_reserves'][coin]) - bal) / bal
-            if reserve_diff >= self.config['reserve_tolerance']:
-                log.info("Rebalance! %s%% difference in %s reserve",
-                         str((reserve_diff * 100).quantize(PERC)), coin)
+            res_usd = self.coin_to_usd(coin, res)
+            thresh = Decimal(self.config['reserve_thresh_usd'])
+            if bal_usd > res_usd + thresh:
+                log.info('Rebalance! %s balance is %s higher than reserve.', coin, bal-res)
+                return True
+            if bal_usd < res_usd - thresh:
+                log.info('Rebalance! %s balance is %s lower than reserve.', coin, res-bal)
                 return True
         return False
 
@@ -304,13 +237,23 @@ class OrderbookManager:
             if coin == "BTC":
                 total_bal += Decimal(bal)
             else:
-                try:
-                    bid = ExchangeDatastore.tickers['bittrex'][coin+'_BTC']['bid']
-                    total_bal += Decimal(bal)*bid
-                except KeyError:
-                    log.warning("Can't get bid price for %s!  Is it configured?", coin)
-        btc_price = self.api.get('/v1/currency/BTC')['currency']['config']['price']
-        return total_bal, (total_bal * Decimal(btc_price)).quantize(PERC)
+                total_bal += self.coin_to_btc(coin, bal)
+        return total_bal, self.btc_to_usd(total_bal).quantize(PERC)
+
+    def coin_to_btc(self, coin, amt):
+        try:
+            bid = ExchangeDatastore.tickers['bittrex'][coin+'_BTC']['bid']
+            return (Decimal(amt)*Decimal(bid)).quantize(COIN)
+        except KeyError:
+            log.warning("Can't get bid price for %s!  Is it configured?", coin)
+            return 0
+
+    def btc_to_usd(self, amt):
+        btc_price = Decimal(self.api.get('/v1/currency/BTC')['currency']['config']['price'])
+        return Decimal(amt) * btc_price
+
+    def coin_to_usd(self, coin, amt):
+        return self.btc_to_usd(self.coin_to_btc(coin, amt))
 
     async def monitor(self):
         # Sleep to allow data scrapers to populate

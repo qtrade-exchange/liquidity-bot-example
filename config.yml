@@ -9,24 +9,24 @@ orderbook_manager:
       LTC: 1
   currency_reserves:
     DOGE: 0
-    BTC: 0
+    BTC: 0.00000010
     LTC: 0
 
   intervals:
     buy_limit:
-      0.03: 0.2
-      0.05: 0.3
-      0.09: 0.3
-      0.13: 0.1
-      0.20: 0.1
+      0.03: 0.1
+      0.05: 0.15
+      0.09: 0.2
+      0.13: 0.25
+      0.20: 0.3
     sell_limit:
-      0.03: 0.2
-      0.05: 0.3
-      0.09: 0.3
-      0.13: 0.1
-      0.20: 0.1
+      0.03: 0.1
+      0.05: 0.15
+      0.09: 0.2
+      0.13: 0.25
+      0.20: 0.3
   monitor_period: 300
-  reserve_tolerance: .05
+  reserve_thresh_usd: 1.00
   price_tolerance: .01
   amount_tolerance: .05
   dry_run_mode: False
