@@ -181,10 +181,12 @@ class OrderbookManager:
             res_usd = self.coin_to_usd(coin, res)
             thresh = Decimal(self.config['reserve_thresh_usd'])
             if bal_usd > res_usd + thresh:
-                log.info('Rebalance! %s balance is %s higher than reserve.', coin, bal-res)
+                log.info('Rebalance! %s balance is %s higher than reserve.',
+                         coin, (bal - res).quantize(COIN))
                 return True
             if bal_usd < res_usd - thresh:
-                log.info('Rebalance! %s balance is %s lower than reserve.', coin, res-bal)
+                log.info('Rebalance! %s balance is %s lower than reserve.',
+                         coin, (res - bal).quantize(COIN))
                 return True
         return False
 
@@ -242,14 +244,15 @@ class OrderbookManager:
 
     def coin_to_btc(self, coin, amt):
         try:
-            bid = ExchangeDatastore.tickers['bittrex'][coin+'_BTC']['bid']
-            return (Decimal(amt)*Decimal(bid)).quantize(COIN)
+            bid = ExchangeDatastore.tickers['bittrex'][coin + '_BTC']['bid']
+            return (Decimal(amt) * Decimal(bid)).quantize(COIN)
         except KeyError:
             log.warning("Can't get bid price for %s!  Is it configured?", coin)
             return 0
 
     def btc_to_usd(self, amt):
-        btc_price = Decimal(self.api.get('/v1/currency/BTC')['currency']['config']['price'])
+        btc_price = Decimal(self.api.get('/v1/currency/BTC')
+                            ['currency']['config']['price'])
         return Decimal(amt) * btc_price
 
     def coin_to_usd(self, coin, amt):
@@ -267,7 +270,8 @@ class OrderbookManager:
             try:
                 self.generate_orders()
                 btc_val, usd_val = self.estimate_account_value()
-                log.info("Current account value is about $%s, %s BTC", usd_val, btc_val)
+                log.info("Current account value is about $%s, %s BTC",
+                         usd_val, btc_val)
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)
