@@ -156,10 +156,10 @@ class OrderbookManager:
                     if price_diff > price_tol:
                         if o[0] > price_diff:
                             log.info('Rebalance! %s %s price is %s%% higher than allotted',
-                                     market, t, price_diff.quantize(PERC))
+                                     market, t, price_diff.quantize(PERC)*Decimal(100))
                         else:
                             log.info('Rebalance! %s %s price is %s%% lower than allotted',
-                                     market, t, price_diff.quantize(PERC))
+                                     market, t, price_diff.quantize(PERC)*Decimal(100))
                         return True
                     if n[1] == 0:
                         continue
@@ -168,10 +168,10 @@ class OrderbookManager:
                     if amount_diff > amount_tol:
                         if o[1] > amount_diff:
                             log.info('Rebalance! %s %s amount is %s%% higher than allotted',
-                                     market, t, amount_diff.quantize(PERC))
+                                     market, t, amount_diff.quantize(PERC)*Decimal(100))
                         else:
                             log.info('Rebalance! %s %s amount is %s%% lower than allotted',
-                                     market, t, amount_diff.quantize(PERC))
+                                     market, t, amount_diff.quantize(PERC)*Decimal(100))
                         return True
 
         for coin, bal in self.api.balances().items():
