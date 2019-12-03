@@ -131,5 +131,13 @@ def estimate_account_gain(ctx):
     print(ctx.obj['obm'].estimate_account_gain(btc_val))
 
 
+@cli.command()
+@click.pass_context
+def trade_tracking_test(ctx):
+    print(ctx.obj['obm'].boot_trades())
+    print(ctx.obj['obm'].check_for_trades())
+
+
+
 if __name__ == "__main__":
     cli(obj={})

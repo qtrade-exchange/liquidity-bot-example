@@ -1,13 +1,14 @@
 import asyncio
 import logging
 import time
+import heapq
 from decimal import Decimal
 
 from data_classes import ExchangeDatastore, PrivateDatastore
 from market_scrapers import QTradeScraper
 from qtrade_client.api import QtradeAPI, APIException
 
-from pprint import pprint
+from pprint import pprint, pformat
 
 COIN = Decimal('.00000001')
 PERC = Decimal('.01')
@@ -269,12 +270,28 @@ class OrderbookManager:
             return self.btc_to_usd(amt)
         return self.btc_to_usd(self.coin_to_btc(coin, amt))
 
+    def boot_trades(self):
+        trades = {t['id']: t for t in self.api.get('/v1/user/trades')['trades']}
+        newest_ids = heapq.nlargest(10, trades.keys())
+        recent_trades = {id: trades[id] for id in newest_ids}
+        self.most_recent_trade_id = max(newest_ids)
+        log.info("10 most recent trades:\n%s", pformat(recent_trades))
+
+    def check_for_trades(self):
+        res = self.api.get('/v1/user/trades', newer_than=self.most_recent_trade_id)
+        if res['trades'] == []:
+            log.info('No new trades!')
+            return
+        trades = {t['id']: t for t in res['trades']}
+        log.info("Bot made new trades:\n%s", pformat(trades))
+        self.most_recent_trade_id = max(trades.keys())
+
     async def monitor(self):
         # Sleep to allow data scrapers to populate
         await asyncio.sleep(2)
-
         log.info("Starting orderbook manager; interval period %s sec",
                  self.config['monitor_period'])
+        self.boot_trades()
         while True:
             try:
                 self.generate_orders()
@@ -284,6 +301,7 @@ class OrderbookManager:
                 btc_gain, usd_gain = self.estimate_account_gain(btc_val)
                 log.info("The bot has earned $%s, %s BTC",
                          usd_gain, btc_gain)
+                self.check_for_trades()
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)
