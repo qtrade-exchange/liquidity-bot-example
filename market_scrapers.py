@@ -2,6 +2,7 @@ import sys
 import requests
 import yaml
 import json
+import ccxt
 
 import logging as log
 from decimal import Decimal
@@ -73,8 +74,40 @@ class BittrexScraper(APIScraper):
         return tickers
 
 
+class CCXTScraper(APIScraper):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def scrape_ticker(self):
+        tickers = {}
+        for market, qmarket in self.markets.items():
+            bid_total = Decimal('0')
+            last_total = Decimal('0')
+            ask_total = Decimal('0')
+            for ex_id in self.exchanges:
+                res = ex_class = getattr(ccxt, ex_id)
+                ex = ex_class({
+                    'apiKey': '',
+                    'secret': '',
+                    'timeout': 30000,
+                    'enableRateLimit': True,
+                })
+                res = ex.fetchTicker(market)
+                log.debug("Ticker %s from %s was acquired successfully",
+                          market, ex_id)
+                bid_total += Decimal(res['bid'])
+                last_total += Decimal(res['last'])
+                ask_total += Decimal(res['ask'])
+            bid_total = (bid_total/len(self.exchanges)).quantize(COIN)
+            last_total = (last_total/len(self.exchanges)).quantize(COIN)
+            ask_total = (ask_total/len(self.exchanges)).quantize(COIN)
+            tickers[qmarket] = {"bid": bid_total, "last": last_total, "ask": ask_total}
+        return tickers
+
+
 if __name__ == "__main__":
-    log_level = log.DEBUG
+    log_level = log.INFO
 
     root = log.getLogger()
     root.setLevel(log_level)
@@ -92,3 +125,6 @@ if __name__ == "__main__":
            'scrapers']['bittrex']['markets']).scrape_ticker())
     pprint(QTradeScraper(exchange_name='qtrade', markets=config[
            'scrapers']['qtrade']['markets']).scrape_ticker())
+
+    pprint(CCXTScraper(markets=config['scrapers']['ccxt']['markets'],
+            exchanges=config['scrapers']['ccxt']['exchanges']).scrape_ticker())

@@ -2,15 +2,19 @@ orderbook_manager:
   market_allocations:
     # configs are always "market_base" format
     DOGE_BTC:
-      BTC: .7
+      BTC: .6
       DOGE: 1
     LTC_BTC:
-      BTC: .3
+      BTC: .2
       LTC: 1
+    NANO_BTC:
+      BTC: .2
+      NANO: 1
   currency_reserves:
-    DOGE: 0
+    DOGE: 0.01
     BTC: 0.00000010
-    LTC: 0
+    LTC: 0.001
+    NANO: 0.0000010
 
   intervals:
     buy_limit:
@@ -38,3 +42,6 @@ market_data_collector:
       markets: {'DOGE_BTC':'DOGE_BTC', 'LTC_BTC':'LTC_BTC'}
     bittrex:
       markets: {'BTC-DOGE':'DOGE_BTC', 'BTC-LTC':'LTC_BTC'}
+    ccxt:
+      markets: {'NANO/BTC':'NANO_BTC'}
+      exchanges: ['binance', 'kucoin', 'kraken']

@@ -221,8 +221,12 @@ class OrderbookManager:
         allocs = self.compute_allocations()
         allocation_profile = {}
         for market, a in allocs.items():
-            bid = ExchangeDatastore.tickers['bittrex'][market]['bid']
-            ask = ExchangeDatastore.tickers['bittrex'][market]['ask']
+            if market in ExchangeDatastore.tickers['bittrex'].keys():
+                bid = ExchangeDatastore.tickers['bittrex'][market]['bid']
+                ask = ExchangeDatastore.tickers['bittrex'][market]['ask']
+            elif market in ExchangeDatastore.tickers['ccxt'].keys():
+                bid = ExchangeDatastore.tickers['ccxt'][market]['bid']
+                ask = ExchangeDatastore.tickers['ccxt'][market]['ask']
             log.info("Generating %s orders with bid %s and ask %s",
                      market, bid, ask)
             allocation_profile[market] = self.price_orders(

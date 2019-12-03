@@ -2,11 +2,12 @@ import asyncio
 import logging
 
 from data_classes import ExchangeDatastore
-from market_scrapers import QTradeScraper, BittrexScraper
+from market_scrapers import QTradeScraper, BittrexScraper, CCXTScraper
 
 scraper_classes = {
     "qtrade": QTradeScraper,
-    "bittrex": BittrexScraper
+    "bittrex": BittrexScraper,
+    "ccxt": CCXTScraper
 }
 
 log = logging.getLogger('mdc')
