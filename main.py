@@ -122,5 +122,14 @@ def estimate_account_value(ctx):
     print(ctx.obj['obm'].estimate_account_value())
 
 
+@cli.command()
+@click.pass_context
+def estimate_account_gain(ctx):
+    ctx.obj['mdc'].update_tickers()
+    ctx.obj['mdc'].update_midpoints()
+    btc_val, usd_val = ctx.obj['obm'].estimate_account_value()
+    print(ctx.obj['obm'].estimate_account_gain(btc_val))
+
+
 if __name__ == "__main__":
     cli(obj={})

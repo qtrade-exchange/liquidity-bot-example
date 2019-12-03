@@ -246,6 +246,11 @@ class OrderbookManager:
                 total_bal += self.coin_to_btc(coin, bal)
         return total_bal, self.btc_to_usd(total_bal).quantize(PERC)
 
+    def estimate_account_gain(self, btc_bal):
+        cost_basis = Decimal(self.config['cost_basis_btc'])
+        gain = (btc_bal - cost_basis).quantize(COIN)
+        return gain, self.btc_to_usd(gain).quantize(PERC)
+
     def coin_to_btc(self, coin, amt):
         try:
             bid = ExchangeDatastore.tickers['bittrex'][coin + '_BTC']['bid']
@@ -276,6 +281,9 @@ class OrderbookManager:
                 btc_val, usd_val = self.estimate_account_value()
                 log.info("Current account value is about $%s, %s BTC",
                          usd_val, btc_val)
+                btc_gain, usd_gain = self.estimate_account_gain(btc_val)
+                log.info("The bot has earned $%s, %s BTC",
+                         usd_gain, btc_gain)
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)

@@ -34,6 +34,7 @@ orderbook_manager:
   price_tolerance: .01
   amount_tolerance: .05
   dry_run_mode: False
+  cost_basis_btc: 0.164724101
 
 market_data_collector:
   update_period: 300
