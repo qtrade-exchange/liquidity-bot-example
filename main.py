@@ -89,9 +89,9 @@ def allocate_orders_test(ctx):
 @click.pass_context
 def price_orders_test(ctx):
     allocs = ctx.obj['obm'].compute_allocations()
-    a = allocs.popitem()[1]
+    m, a = allocs.popitem()
     print(ctx.obj['obm'].price_orders(
-        ctx.obj['obm'].allocate_orders(a[0], a[1]), 0.0000033))
+        ctx.obj['obm'].allocate_orders(a[0], a[1], m), 0.0000033, 0.0000032))
 
 
 @cli.command()

@@ -16,12 +16,25 @@ PERC = Decimal('.01')
 log = logging.getLogger('obm')
 
 
+class MarketConfig(dict):
+
+    def __init__(self, market_string, config, default={}):
+        self.market_string = market_string
+        self.update(default)
+        self.update(config)
+
+
 class OrderbookManager:
 
     def __init__(self, endpoint, key, config):
         self.config = config
         self.api = QtradeAPI(endpoint, key=key)
         self.prev_alloc_profile = None
+        self.market_configs = {
+            ms: MarketConfig(ms, mkt, default=config['markets'].get('default'))
+            for ms, mkt in config['markets'].items()
+            if ms != 'default'}
+        pprint(self.market_configs)
 
     def compute_allocations(self):
         """ Given our allocation % targets and our current balances, figure out
@@ -37,7 +50,7 @@ class OrderbookManager:
                         'currency_reserves'] if c not in balances.keys()})
         reserve_config = self.config['currency_reserves']
         allocs = {}
-        for market_string, market_alloc in self.config['market_allocations'].items():
+        for market_string, market_alloc in self.market_configs.items():
             market = self.api.markets[market_string]
 
             def allocate_coin(coin):
@@ -58,25 +71,26 @@ class OrderbookManager:
             allocs[market_string] = (market_amount, base_amount)
         return allocs
 
-    def allocate_orders(self, market_alloc, base_alloc):
+    def allocate_orders(self, market_alloc, base_alloc, market_string):
         """ Given some amount of base and market currency determine how we'll
         allocate orders. Returns a tuple of (slippage_ratio, currency_allocation)
         return {
-            "buy": [
+            "buy_limit": [
                 (0.01, 0.00001256),
             ],
-            "sell": [
+            "sell_limit": [
                 (0.01, 1250),
             ]
         }
         """
         buy_allocs = []
         sell_allocs = []
-        for slip, ratio in self.config['intervals']['sell_limit'].items():
+        mc = self.market_configs[market_string]
+        for slip, ratio in mc['intervals']['sell_limit'].items():
             ratio = Decimal(ratio)
             amount = (market_alloc * ratio).quantize(COIN)
             sell_allocs.append((slip, amount))
-        for slip, ratio in self.config['intervals']['buy_limit'].items():
+        for slip, ratio in mc['intervals']['buy_limit'].items():
             ratio = Decimal(ratio)
             value = (base_alloc * ratio).quantize(COIN)
             buy_allocs.append((slip, value))
@@ -85,15 +99,17 @@ class OrderbookManager:
     def price_orders(self, orders, bid, ask):
         """
         return {
-            "buy": [
+            "buy_limit": [
                 (0.00000033, 0.00001256),
             ],
-            "sell": [
+            "sell_limit": [
                 (0.00000034, 1250),
             ]
         } """
         priced_sell_orders = []
         priced_buy_orders = []
+        bid = Decimal(bid)
+        ask = Decimal(ask)
         for slip, amount in orders['sell_limit']:
             slip = Decimal(slip)
             price = (ask + (ask * slip)).quantize(COIN)
@@ -231,7 +247,7 @@ class OrderbookManager:
             log.info("Generating %s orders with bid %s and ask %s",
                      market, bid, ask)
             allocation_profile[market] = self.price_orders(
-                self.allocate_orders(a[0], a[1]), bid, ask)
+                self.allocate_orders(a[0], a[1], market), bid, ask)
         self.rebalance_orders(allocation_profile,
                               self.get_orders(), force=force_rebalance)
 
