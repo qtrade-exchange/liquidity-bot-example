@@ -1,11 +1,11 @@
+from typing import Union
+
 import asyncio
 import logging
-import time
 import heapq
 from decimal import Decimal
 
-from data_classes import ExchangeDatastore, PrivateDatastore
-from market_scrapers import QTradeScraper
+from data_classes import ExchangeDatastore
 from qtrade_client.api import QtradeAPI, APIException
 
 from pprint import pprint, pformat
@@ -233,17 +233,20 @@ class OrderbookManager:
     def generate_orders(self, force_rebalance=False):
         allocs = self.compute_allocations()
         allocation_profile = {}
-        for market, a in allocs.items():
+        for market, (market_amount, base_amount) in allocs.items():
             if market in ExchangeDatastore.tickers['bittrex'].keys():
                 bid = ExchangeDatastore.tickers['bittrex'][market]['bid']
                 ask = ExchangeDatastore.tickers['bittrex'][market]['ask']
             elif market in ExchangeDatastore.tickers['ccxt'].keys():
                 bid = ExchangeDatastore.tickers['ccxt'][market]['bid']
                 ask = ExchangeDatastore.tickers['ccxt'][market]['ask']
+            else:
+                log.warning(f"Can't get bid/ask price for {market} to generate orders!")
+                continue
             log.info("Generating %s orders with bid %s and ask %s",
                      market, bid, ask)
             allocation_profile[market] = self.price_orders(
-                self.allocate_orders(a[0], a[1], market), bid, ask)
+                self.allocate_orders(market_amount, base_amount, market), bid, ask)
         self.rebalance_orders(allocation_profile,
                               self.get_orders(), force=force_rebalance)
 
@@ -277,7 +280,7 @@ class OrderbookManager:
                             ['currency']['config']['price'])
         return Decimal(amt) * btc_price
 
-    def coin_to_usd(self, coin, amt):
+    def coin_to_usd(self, coin: str, amt: Union[Decimal, float]) -> Decimal:
         if coin == "BTC":
             return self.btc_to_usd(amt)
         return self.btc_to_usd(self.coin_to_btc(coin, amt)).quantize(PERC)
