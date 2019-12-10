@@ -192,7 +192,7 @@ class OrderbookManager:
 
         balances = self.api.balances()
         for coin, reserve in self.config['currency_reserves'].items():
-            balance_usd = self.coin_to_usd(coin, balances[coin])
+            balance_usd = self.coin_to_usd(coin, balances.get(coin, 0))
             reserve_usd = self.coin_to_usd(coin, reserve)
             thresh = Decimal(self.config['reserve_thresh_usd'])
             if balance_usd > reserve_usd + thresh:
