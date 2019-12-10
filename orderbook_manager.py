@@ -34,7 +34,6 @@ class OrderbookManager:
             ms: MarketConfig(ms, mkt, default=config['markets'].get('default'))
             for ms, mkt in config['markets'].items()
             if ms != 'default'}
-        pprint(self.market_configs)
 
     def compute_allocations(self):
         """ Given our allocation % targets and our current balances, figure out
@@ -191,19 +190,16 @@ class OrderbookManager:
                                      market, t, amount_diff.quantize(PERC)*Decimal(100))
                         return True
 
-        for coin, bal in self.api.balances().items():
-            bal = Decimal(bal)
-            bal_usd = self.coin_to_usd(coin, bal)
-            res = Decimal(self.config['currency_reserves'][coin])
-            res_usd = self.coin_to_usd(coin, res)
+        balances = self.api.balances()
+        for coin, reserve in self.config['currency_reserves'].items():
+            balance_usd = self.coin_to_usd(coin, balances[coin])
+            reserve_usd = self.coin_to_usd(coin, reserve)
             thresh = Decimal(self.config['reserve_thresh_usd'])
-            if bal_usd > res_usd + thresh:
-                log.info('Rebalance! %s balance is %s higher than reserve.',
-                         coin, (bal - res).quantize(COIN))
+            if balance_usd > reserve_usd + thresh:
+                log.info(f"Rebalance! {coin} balance_usd {balance_usd} > reserve {reserve} + thresh {thresh}.")
                 return True
-            if bal_usd < res_usd - thresh:
-                log.info('Rebalance! %s balance is %s lower than reserve.',
-                         coin, (res - bal).quantize(COIN))
+            if balance_usd < reserve_usd - thresh:
+                log.info(f"Rebalance! {coin} balance_usd {balance_usd} < reserve {reserve} - thresh {thresh}.")
                 return True
         return False
 
@@ -284,7 +280,7 @@ class OrderbookManager:
     def coin_to_usd(self, coin, amt):
         if coin == "BTC":
             return self.btc_to_usd(amt)
-        return self.btc_to_usd(self.coin_to_btc(coin, amt))
+        return self.btc_to_usd(self.coin_to_btc(coin, amt)).quantize(PERC)
 
     def boot_trades(self):
         trades = {t['id']: t for t in self.api.get('/v1/user/trades')['trades']}

@@ -48,7 +48,7 @@ orderbook_manager:
   reserve_thresh_usd: 1.00
   price_tolerance: .01
   amount_tolerance: .05
-  dry_run_mode: False
+  dry_run_mode: True
   cost_basis_btc: 0.164724101
 
 market_data_collector:
