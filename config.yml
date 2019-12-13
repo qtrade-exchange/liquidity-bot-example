@@ -55,9 +55,9 @@ market_data_collector:
   update_period: 300
   scrapers:
     qtrade:
-      markets: {'DOGE_BTC':'DOGE_BTC', 'LTC_BTC':'LTC_BTC'}
+      markets: {'DOGE_BTC':'DOGE_BTC', 'LTC_BTC':'LTC_BTC', 'ARO_BTC':'ARO_BTC'}
     bittrex:
-      markets: {'BTC-DOGE':'DOGE_BTC', 'BTC-LTC':'LTC_BTC'}
+      markets: {'BTC-DOGE':'DOGE_BTC', 'BTC-LTC':'LTC_BTC', 'BTC-ETH':'ETH_BTC'}
     ccxt:
       markets: {'NANO/BTC':'NANO_BTC'}
       exchanges: ['binance', 'kucoin', 'kraken']

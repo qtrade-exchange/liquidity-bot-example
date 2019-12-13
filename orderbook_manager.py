@@ -268,12 +268,15 @@ class OrderbookManager:
         return gain, self.btc_to_usd(gain).quantize(PERC)
 
     def coin_to_btc(self, coin, amt):
-        try:
-            bid = ExchangeDatastore.tickers['bittrex'][coin + '_BTC']['bid']
-            return (Decimal(amt) * Decimal(bid)).quantize(COIN)
-        except KeyError:
-            log.warning("Can't get bid price for %s!  Is it configured?", coin)
-            return 0
+        exchanges = ['bittrex', 'ccxt', 'qtrade']
+        for e in exchanges:
+            try:
+                bid = ExchangeDatastore.tickers[e][coin + '_BTC']['bid']
+                return (Decimal(amt) * Decimal(bid)).quantize(COIN)
+            except KeyError:
+                pass
+        log.warning("Can't get bid price for %s for price estimation", coin)
+        return 0
 
     def btc_to_usd(self, amt):
         btc_price = Decimal(self.api.get('/v1/currency/BTC')
