@@ -151,7 +151,7 @@ class OrderbookManager:
             amount = quantity
         try:
             self.api.order(order_type, price, market_string=market_string,
-                           value=value, amount=amount, prevent_taker=True)
+                           value=value, amount=amount, prevent_taker=False)
         except APIException as e:
             if e.code == 400:
                 log.warning("Caught API error!")
@@ -323,3 +323,5 @@ class OrderbookManager:
                 await asyncio.sleep(self.config['monitor_period'])
             except Exception:
                 log.warning("Orderbook manager loop exploded", exc_info=True)
+                # Just in case the entire program explodes, so that we don't have orders out.
+                self.api.cancel_market_orders()
