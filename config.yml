@@ -2,7 +2,7 @@ orderbook_manager:
   markets:
     # configs are always "market_base" format
     DOGE_BTC:
-      BTC: .6
+      BTC: .3
       DOGE: 1
     LTC_BTC:
       BTC: .2
@@ -10,19 +10,22 @@ orderbook_manager:
       intervals:
         buy_limit:
           0.03: 0.1
-          0.05: 0.15
-          0.09: 0.2
-          0.13: 0.25
-          0.20: 0.3
+          0.05: 0.125
+          0.09: 0.15
+          0.13: 0.275
+          0.20: 0.35
         sell_limit:
           0.03: 0.1
-          0.05: 0.15
-          0.09: 0.2
-          0.13: 0.25
-          0.20: 0.3
+          0.05: 0.125
+          0.09: 0.15
+          0.13: 0.275
+          0.20: 0.35
     NANO_BTC:
       BTC: .2
       NANO: 1
+    ETH_BTC:
+      BTC: .3
+      ETH: 1
     default:
       intervals:
         buy_limit:
